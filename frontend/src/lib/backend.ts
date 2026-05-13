@@ -1,17 +1,4 @@
-export interface BackendSpeed {
-  downloadBps: number;
-  uploadBps: number;
-}
-
-export interface BackendState {
-  speeds: Record<string, BackendSpeed>;
-  interfaces: string[];
-  errorMessage: string;
-  sampledAt: string;
-  interfaceCount: number;
-  downloadBytesPerSecond: number;
-  uploadBytesPerSecond: number;
-}
+import type { AppConfig, BackendState } from './contracts';
 
 type GoAppBridge = {
   GetConfig?: () => Promise<unknown>;
@@ -41,12 +28,12 @@ function requireMethod<T extends keyof GoAppBridge>(name: T): NonNullable<GoAppB
   return method as NonNullable<GoAppBridge[T]>;
 }
 
-export async function GetConfig(): Promise<unknown> {
-  return requireMethod('GetConfig')();
+export async function GetConfig(): Promise<AppConfig> {
+  return requireMethod('GetConfig')() as Promise<AppConfig>;
 }
 
-export async function SaveConfig(config: unknown): Promise<unknown> {
-  return requireMethod('SaveConfig')(config);
+export async function SaveConfig(config: AppConfig): Promise<AppConfig> {
+  return requireMethod('SaveConfig')(config) as Promise<AppConfig>;
 }
 
 export async function GetState(): Promise<BackendState> {

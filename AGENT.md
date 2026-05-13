@@ -32,14 +32,14 @@
 
 ```
 Phase 1  [x] Bootstrap & Go Backend
-Phase 2  [ ] Settings Window UI
-Phase 3  [ ] Integration & System Tray (Revised)
+Phase 2  [x] Settings Window UI
+Phase 3  [ ] Integration & System Tray
 Phase 4  [ ] Polish & Distribution
 ```
 
-**Current phase:** Phase 2: Settings Window UI  
+**Current phase:** Phase 3: Integration & System Tray  
 **Last updated:** 2026-05-13  
-**Last action taken:** Phase 1 marked complete by user request.
+**Last action taken:** Main window switched to frameless mode and the custom desktop title bar was upgraded with branded chrome and standard window controls.
 
 ---
 
@@ -86,7 +86,7 @@ Phase 4  [ ] Polish & Distribution
 
 ## Phase 2 — Settings Window UI
 
-**Status:** `[ ] Not started` | `[ ] In progress` | `[x] Done` | `[x] Approved`
+**Status:** `[ ] Not started` | `[ ] In progress` | `[x] Done` | `[ ] Approved`
 
 ### Tasks
 
@@ -101,26 +101,34 @@ Phase 4  [ ] Polish & Distribution
 - [x] `windows/settings/Settings.tsx` created
   - [x] Live speed display (auto-scaled units)
   - [x] Interface selection dropdown
-  - [x] Toggle: Show in system tray
-  - [x] Toggle: Show widget overlay
   - [x] Select: Download only / Upload only / Both
   - [x] Slider: Poll interval (500ms–5000ms)
+  - [x] Saved app preferences: theme mode + app preset
+  - [x] Saved advanced widget preferences grouped separately
   - [x] Slider: Font size (10–32px)
-  - [x] Text input: Widget text color (hex)
+  - [x] Widget preset selection
+  - [x] Widget position fields (`X` / `Y`)
   - [x] Slider: Background opacity (0–100%)
+  - [x] Slider: Text opacity (0–100%)
   - [x] Slider: Overall widget opacity (0–100%)
 - [x] `App.SaveConfig(config)` method added to `app.go`
 - [x] Settings load from backend on app start
 - [x] Settings persist to backend on change
+- [x] Phase copy and settings messaging realigned so deferred widget behavior is labeled clearly
+- [x] Frontend Wails bridge + config typing tightened to mirror current backend contracts
 
 ### Manual Test Checklist
 - [x] Live speed updates every second in the UI
 - [x] Changing interface dropdown filters the speeds shown
 - [x] All sliders and toggles render without errors
 - [x] Settings survive `wails dev` restart
+- [ ] Advanced widget-related controls remain visible and save without claiming live widget/tray behavior
+- [ ] No stale Phase 1 wording remains in the settings window
 
 ### Notes
 - The settings window is implemented and verified with a frontend production build.
+- Phase 2 intentionally keeps extra settings already present in the repo, but reclassifies them as advanced saved preferences instead of promoting them to full later-phase behavior.
+- The native OS title bar has been replaced with a custom branded title bar that now owns drag, minimize, maximize/restore, theme toggle, and close actions.
 - ~~`shadcn/ui` is still not scaffolded locally, so the current Phase 2 controls use lightweight local inputs instead of shadcn primitives.~~ Resolved: all controls now use shadcn/ui components (Card, Select, Switch, Slider, Label, Separator).
 - Go compile checks passed with `env GOCACHE=/tmp/go-build-cache go test ./internal/...` and `env GOCACHE=/tmp/go-build-cache go test -run TestDoesNotExist .`.
 - `Settings.css` and `App.css` have been deleted — all styling is now via Tailwind utility classes.
@@ -130,36 +138,35 @@ Phase 4  [ ] Polish & Distribution
 
 ---
 
-## Phase 3 — Integration & System Tray (Revised)
+## Phase 3 — Integration & System Tray
 
-**Status:** `[ ] Not started` | `[ ] In progress` | `[x] Done` | `[ ] Approved`
+**Status:** `[ ] Not started` | `[ ] In progress` | `[ ] Done` | `[ ] Approved`
 
 ### Tasks
 
-- [x] **System Tray Support**
-  - [x] Implement `TrayMenu` in `main.go`
-  - [x] Add tray icon (`build/appicon.png`)
-  - [x] Handle "Show Settings", "Toggle Widget", and "Exit" in tray
-- [x] **Background Operation**
-  - [x] Implement "Close to Tray" (hide main window on X)
-  - [x] Ensure app only exits via Tray -> Exit
-  - [x] Ensure widget stays visible if enabled when main window is hidden
-- [x] **Widget Customization**
-  - [x] Add `WidgetBgColor` and `WidgetTextOpacity` to `Config`
-  - [x] Implement UI controls in `Settings.tsx`
-  - [x] Apply new styles in `Widget.tsx`
-  - [x] Remove drag functionality from widget (fixed position)
-- [x] **Process Management**
-  - [x] Ensure tray exit kills both main app and widget process
+- [ ] **System Tray Support**
+  - [ ] Implement tray menu in `main.go`
+  - [ ] Add tray icon (`build/appicon.png`)
+  - [ ] Handle "Show Settings", "Toggle Widget", and "Exit" in tray
+- [ ] **Background Operation**
+  - [ ] Implement close-to-tray behavior
+  - [ ] Ensure app only exits via tray -> Exit
+  - [ ] Ensure widget stays visible if enabled when main window is hidden
+- [ ] **Widget Window Behavior**
+  - [ ] Promote saved widget preferences into live multi-window behavior
+  - [ ] Apply saved widget position in the floating window
+  - [ ] Confirm widget lifecycle matches settings and tray actions
+- [ ] **Process Management**
+  - [ ] Ensure tray exit kills all app windows/processes cleanly
 
 ### Manual Test Checklist
 - [ ] Tray icon appears and menu works
 - [ ] Main window hides instead of quitting on close
-- [ ] Widget is non-draggable and respects all customization settings
+- [ ] Widget respects saved customization settings when the floating window is enabled
 - [ ] Exit from tray terminates all processes
 
 ### Notes
-- This phase merges and revisits previous Phase 3, 4, and 5 goals to provide a polished, background-aware experience.
+- Saved widget preferences already exist from Phase 2; this phase is where they become active background and multi-window behavior.
 
 ---
 
@@ -289,6 +296,8 @@ Phase 4  [ ] Polish & Distribution
 | 1 | 2 | Phase 2 control layer | Lightweight local React controls | Blocking the phase on missing shadcn scaffold | The settings flow could be built and verified locally without waiting on component generation. |
 | 2 | 2 | shadcn transformation styling | Tailwind utility classes only (delete Settings.css + App.css) | Keep hybrid CSS + Tailwind | Full Tailwind approach is consistent with shadcn conventions and eliminates CSS duplication. |
 | 3 | 2 | Font choice | Inter Variable (@fontsource-variable/inter) | Nunito (previous default) | Inter is the standard shadcn/ui font; variable weight provides design flexibility without extra files. |
+| 4 | 2 | Phase 2 scope cleanup | Keep the expanded settings surface, but reclassify advanced controls as saved/deferred preferences | Trim the UI back to the original minimal Phase 2, or promote every extra control to full later-phase behavior | This preserves useful work already in the repo while making the current phase boundary honest in both the UI and tracker. |
+| 5 | 2 | Window chrome ownership | Use a frameless Wails window with the in-app title bar handling drag and window controls | Keep the native OS title bar above a decorative custom bar | A single branded title bar gives the app a cleaner desktop identity and keeps title-bar actions under our control. |
 
 ---
 
@@ -314,6 +323,7 @@ Phase 4  [ ] Polish & Distribution
 | `internal/config/config.go` | `[x]` | 1 | Settings persistence |
 | `internal/tray/icon.go` | `[ ]` | 4 | Dynamic tray bitmap |
 | `frontend/src/stores/useNetStore.ts` | `[x]` | 2 | Zustand store |
+| `frontend/src/lib/contracts.ts` | `[x]` | 2 | Shared frontend contracts for config + backend state |
 | `frontend/src/windows/settings/Settings.tsx` | `[x]` | 2 | Settings UI — fully shadcn/Tailwind |
 | `frontend/src/windows/settings/Settings.css` | `[DELETED]` | 2 | Replaced by Tailwind utilities |
 | `frontend/src/App.css` | `[DELETED]` | 1 | Unused legacy CSS, removed |

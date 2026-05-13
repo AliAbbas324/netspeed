@@ -1,28 +1,6 @@
 import { create } from 'zustand';
-import { GetConfig, GetState, SaveConfig, type BackendState } from '../lib/backend';
-
-export interface InterfaceSpeed {
-  downloadBps: number;
-  uploadBps: number;
-}
-
-export interface AppConfig {
-  selectedInterface: string;
-  pollIntervalMs: number;
-  showDownload: boolean;
-  showUpload: boolean;
-  showWidget: boolean;
-  widgetFontSize: number;
-  widgetBgOpacity: number;
-  widgetOpacity: number;
-  widgetTextOpacity: number;
-  widgetX: number;
-  widgetY: number;
-  hideWidgetOnFocus: boolean;
-  theme: 'light' | 'dark' | 'system';
-  appPreset: string;
-  widgetPreset: string;
-}
+import { GetConfig, GetState, SaveConfig } from '../lib/backend';
+import type { AppConfig, BackendState, InterfaceSpeed } from '../lib/contracts';
 
 interface NetStoreState {
   speeds: Record<string, InterfaceSpeed>;
@@ -35,6 +13,21 @@ interface NetStoreState {
   refreshState: () => Promise<void>;
   updateConfig: (partial: Partial<AppConfig>) => Promise<void>;
   applyTheme: () => void;
+}
+
+let systemColorSchemeListenerAttached = false;
+
+function attachSystemColorSchemeListener(getState: () => NetStoreState) {
+  if (typeof window === 'undefined' || systemColorSchemeListenerAttached) {
+    return;
+  }
+  systemColorSchemeListenerAttached = true;
+  const media = window.matchMedia('(prefers-color-scheme: dark)');
+  media.addEventListener('change', () => {
+    if (getState().config.theme === 'system') {
+      getState().applyTheme();
+    }
+  });
 }
 
 const defaultConfig: AppConfig = {
@@ -53,6 +46,7 @@ const defaultConfig: AppConfig = {
   appPreset: 'default',
   widgetPreset: 'classic',
   hideWidgetOnFocus: true,
+  titleBarLogoRoundedCorners: true,
 };
 
 export interface AppPreset {
@@ -105,10 +99,14 @@ let pollHandle: number | null = null;
 let initRetryHandle: number | null = null;
 
 function normalizeConfig(value: Partial<AppConfig> | null | undefined): AppConfig {
-  return {
+  const merged: AppConfig = {
     ...defaultConfig,
     ...value,
   };
+  if (typeof merged.titleBarLogoRoundedCorners !== 'boolean') {
+    merged.titleBarLogoRoundedCorners = defaultConfig.titleBarLogoRoundedCorners;
+  }
+  return merged;
 }
 
 function startPolling(refreshState: () => Promise<void>, intervalMs: number) {
@@ -175,7 +173,7 @@ export const useNetStore = create<NetStoreState>((set, get) => ({
         GetState(),
       ]);
 
-      const normalizedConfig = normalizeConfig(configValue as Partial<AppConfig>);
+      const normalizedConfig = normalizeConfig(configValue);
       set({
         config: normalizedConfig,
         isLoading: false,
@@ -183,6 +181,7 @@ export const useNetStore = create<NetStoreState>((set, get) => ({
       });
 
       get().applyTheme();
+      attachSystemColorSchemeListener(get);
       startPolling(get().refreshState, normalizedConfig.pollIntervalMs);
     } catch (error) {
       set({
@@ -228,7 +227,7 @@ export const useNetStore = create<NetStoreState>((set, get) => ({
 
     try {
       const savedConfig = await SaveConfig(nextConfig);
-      const normalizedConfig = normalizeConfig(savedConfig as Partial<AppConfig>);
+      const normalizedConfig = normalizeConfig(savedConfig);
       set({
         config: normalizedConfig,
       });

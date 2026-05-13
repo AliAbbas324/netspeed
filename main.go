@@ -23,7 +23,8 @@ func main() {
 		MinWidth:          900,
 		MinHeight:         600,
 		DisableResize:     false,
-		Frameless:         false,
+		// Hide native chrome; `frontend/src/components/TitleBar.tsx` owns drag + window controls.
+		Frameless:         true,
 		StartHidden:       false,
 		HideWindowOnClose: false,
 		BackgroundColour:  &options.RGBA{R: 8, G: 15, B: 29, A: 255},

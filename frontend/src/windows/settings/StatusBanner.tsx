@@ -1,15 +1,14 @@
-import { Info } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useNetStore } from '../../stores/useNetStore';
 
 function formatLastUpdated(sampledAt: string | null) {
   if (!sampledAt) {
-    return 'Waiting for first sample';
+    return '—';
   }
 
   const date = new Date(sampledAt);
   if (Number.isNaN(date.getTime())) {
-    return 'Waiting for first sample';
+    return '—';
   }
 
   return date.toLocaleTimeString([], {
@@ -26,49 +25,33 @@ export function StatusBanner() {
 
   if (errorMessage) {
     return (
-      <Card className="border-destructive/40 bg-destructive/5 shadow-lg">
-        <CardHeader className="pb-2">
-          <div className="flex items-center gap-2">
-            <Info className="h-4 w-4 text-destructive" aria-hidden="true" />
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-destructive">
-              Monitor
-            </p>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-destructive">{errorMessage}</p>
-        </CardContent>
-      </Card>
+      <div
+        role="alert"
+        className="flex gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm"
+      >
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-hidden />
+        <div>
+          <p className="font-medium text-destructive">Monitor</p>
+          <p className="mt-1 text-destructive/90">{errorMessage}</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card className="border-border/30 bg-card/60">
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <Info className="h-4 w-4 text-primary" aria-hidden="true" />
-          <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-            Phase 1 Status
-          </p>
-        </div>
-      </CardHeader>
-      <CardContent className="grid gap-3 md:grid-cols-3">
-        <p className="text-sm text-muted-foreground">
-          Tracking:
+    <div className="flex flex-col gap-3 rounded-lg border border-border bg-muted/25 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-start gap-2 sm:items-center">
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground sm:mt-0" aria-hidden />
+        <p className="text-muted-foreground">
+          <span className="font-medium text-foreground">{interfaces.length || 0}</span>
           {' '}
-          <span className="font-semibold text-foreground">{interfaces.length || 0}</span>
+          active interface{interfaces.length === 1 ? '' : 's'}
+          <span className="mx-2 text-border">·</span>
+          Last sample
           {' '}
-          active interface{interfaces.length === 1 ? '' : 's'}.
+          <span className="font-medium tabular-nums text-foreground">{formatLastUpdated(sampledAt)}</span>
         </p>
-        <p className="text-sm text-muted-foreground">
-          Last updated:
-          {' '}
-          <span className="font-semibold text-foreground">{formatLastUpdated(sampledAt)}</span>
-        </p>
-        <p className="text-sm text-muted-foreground">
-          Widget controls are preview-only in Phase 1 while we stabilize the live monitor.
-        </p>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

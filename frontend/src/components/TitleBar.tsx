@@ -1,11 +1,99 @@
-import { useState, useEffect } from 'react';
-import { X, Minus, Activity, Maximize2, Copy, Sun, Moon } from 'lucide-react';
-import { WindowMinimise, WindowToggleMaximise, WindowHide, EventsOn, WindowIsMaximised } from '../../wailsjs/runtime/runtime';
+import { useState, useEffect, useCallback, type CSSProperties, type SVGProps } from 'react';
+import { X, Minus, Sun, Moon } from 'lucide-react';
+import {
+  WindowMinimise,
+  WindowToggleMaximise,
+  EventsOn,
+  WindowIsMaximised,
+  Quit,
+  WindowSetTitle,
+} from '../../wailsjs/runtime/runtime';
+import { AppBrandingIcon } from '@/components/AppBrandingIcon';
 import { useNetStore } from '../stores/useNetStore';
+
+/** “Expand to full window” glyph (custom SVG, strokes follow `currentColor`). */
+function MaximizeToFullWindowIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden {...props}>
+      <path
+        opacity={0.5}
+        d="M12.9999 21.9994C17.055 21.9921 19.1784 21.8926 20.5354 20.5355C21.9999 19.0711 21.9999 16.714 21.9999 12C21.9999 7.28595 21.9999 4.92893 20.5354 3.46447C19.071 2 16.714 2 11.9999 2C7.28587 2 4.92884 2 3.46438 3.46447C2.10734 4.8215 2.00779 6.94493 2.00049 11"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <path
+        d="M12 12L17 7M17 7H13.25M17 7V10.75"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M2 18C2 16.1144 2 15.1716 2.58579 14.5858C3.17157 14 4.11438 14 6 14C7.88562 14 8.82843 14 9.41421 14.5858C10 15.1716 10 16.1144 10 18C10 19.8856 10 20.8284 9.41421 21.4142C8.82843 22 7.88562 22 6 22C4.11438 22 3.17157 22 2.58579 21.4142C2 20.8284 2 19.8856 2 18Z"
+        stroke="currentColor"
+        strokeWidth={1.5}
+      />
+    </svg>
+  );
+}
+
+/** “Shrink to smaller / restore” glyph (paired with maximize; strokes follow `currentColor`). */
+function ShrinkToSmallerWindowIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden {...props}>
+      <path
+        opacity={0.5}
+        d="M12.9999 21.9994C17.055 21.9921 19.1784 21.8926 20.5354 20.5355C21.9999 19.0711 21.9999 16.714 21.9999 12C21.9999 7.28595 21.9999 4.92893 20.5354 3.46447C19.071 2 16.714 2 11.9999 2C7.28587 2 4.92884 2 3.46438 3.46447C2.10734 4.8215 2.00779 6.94493 2.00049 11"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+      />
+      <path
+        d="M17 7L12 12M12 12H15.75M12 12V8.25"
+        stroke="currentColor"
+        strokeWidth={1.5}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M2 18C2 16.1144 2 15.1716 2.58579 14.5858C3.17157 14 4.11438 14 6 14C7.88562 14 8.82843 14 9.41421 14.5858C10 15.1716 10 16.1144 10 18C10 19.8856 10 20.8284 9.41421 21.4142C8.82843 22 7.88562 22 6 22C4.11438 22 3.17157 22 2.58579 21.4142C2 20.8284 2 19.8856 2 18Z"
+        stroke="currentColor"
+        strokeWidth={1.5}
+      />
+    </svg>
+  );
+}
 
 export function TitleBar() {
   const [isMaximized, setIsMaximized] = useState(false);
   const { config, updateConfig } = useNetStore();
+
+  const syncMaximizedFromRuntime = useCallback(() => {
+    if (typeof WindowIsMaximised !== 'function') return;
+    void WindowIsMaximised()
+      .then(setIsMaximized)
+      .catch(() => setIsMaximized(false));
+  }, []);
+
+  const handleToggleMaximize = useCallback(() => {
+    try {
+      WindowToggleMaximise();
+    } catch {
+      return;
+    }
+    setIsMaximized((prev) => !prev);
+    window.setTimeout(syncMaximizedFromRuntime, 0);
+    window.setTimeout(syncMaximizedFromRuntime, 120);
+  }, [syncMaximizedFromRuntime]);
+
+  useEffect(() => {
+    try {
+      WindowSetTitle('NetSpeed — Settings');
+    } catch {
+      // Browser / no runtime
+    }
+  }, []);
 
   useEffect(() => {
     const hasRuntime = !!(window as Window & { runtime?: unknown }).runtime;
@@ -15,28 +103,33 @@ export function TitleBar() {
     }
 
     const safeEventsOn = typeof EventsOn === 'function' ? EventsOn : () => () => {};
-    const safeWindowIsMaximised = typeof WindowIsMaximised === 'function' ? WindowIsMaximised : async () => false;
+    const safeWindowIsMaximised =
+      typeof WindowIsMaximised === 'function' ? WindowIsMaximised : async () => false;
 
-    // Check initial state
     try {
       void safeWindowIsMaximised().then(setIsMaximized).catch(() => setIsMaximized(false));
     } catch {
       setIsMaximized(false);
     }
 
-    // Listen for window state changes
     let unsubMax = () => {};
     let unsubUnmax = () => {};
     try {
       unsubMax = safeEventsOn('wails:window-maximized', () => setIsMaximized(true));
       unsubUnmax = safeEventsOn('wails:window-unmaximized', () => setIsMaximized(false));
     } catch {
-      // Runtime events unavailable; skip listeners.
+      // Runtime events unavailable
     }
+
+    const onResize = () => {
+      void safeWindowIsMaximised().then(setIsMaximized).catch(() => {});
+    };
+    window.addEventListener('resize', onResize);
 
     return () => {
       unsubMax();
       unsubUnmax();
+      window.removeEventListener('resize', onResize);
     };
   }, []);
 
@@ -46,45 +139,74 @@ export function TitleBar() {
   };
 
   return (
-    <div 
-      className="flex h-10 w-full items-center justify-between border-b border-border/40 bg-card/90 px-4 backdrop-blur-xl select-none"
-      style={{ '--wails-draggable': 'drag' } as any}
-      onDoubleClick={() => WindowToggleMaximise()}
-    >
-      <div className="flex items-center gap-2">
-        <Activity className="h-4 w-4 text-primary" />
-        <span className="text-xs font-bold tracking-tight text-foreground/80">NetSpeed</span>
+    <div className="grid h-12 w-full shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-border/50 bg-card/95 backdrop-blur-xl select-none">
+      <div
+        className="flex min-w-0 items-center gap-3 pl-4"
+        style={{ '--wails-draggable': 'drag' } as CSSProperties}
+        onDoubleClick={handleToggleMaximize}
+      >
+        <AppBrandingIcon rounded={config.titleBarLogoRoundedCorners} size={40} />
+        <div className="flex min-w-0 flex-col justify-center gap-0.5">
+          <span className="truncate text-sm font-bold tracking-tight text-foreground">
+            NetSpeed
+          </span>
+          <span className="truncate text-[11px] font-medium leading-none text-muted-foreground">
+            Network monitor
+          </span>
+        </div>
       </div>
-      
-      <div className="flex items-center gap-1 no-drag" style={{ '--wails-draggable': 'no-drag' } as any}>
+
+      <div
+        className="flex items-center justify-center px-6"
+        style={{ '--wails-draggable': 'drag' } as CSSProperties}
+        onDoubleClick={handleToggleMaximize}
+      >
+        <span className="text-xs font-semibold tracking-wide text-muted-foreground/90">
+          Settings
+        </span>
+      </div>
+
+      <div
+        className="flex items-center justify-end gap-0.5 pr-2"
+        style={{ '--wails-draggable': 'no-drag' } as CSSProperties}
+      >
         <button
+          type="button"
           onClick={toggleTheme}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors mr-2"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           title={`Switch to ${config.theme === 'dark' ? 'light' : 'dark'} mode`}
         >
           {config.theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
-        <div className="h-4 w-[1px] bg-border/40 mx-1" />
+        <div className="mx-1.5 h-5 w-px shrink-0 bg-border/60" aria-hidden />
         <button
+          type="button"
           onClick={() => WindowMinimise()}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           title="Minimize"
         >
-          <Minus className="h-4 w-4" />
+          <Minus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
         </button>
         <button
-          onClick={() => WindowToggleMaximise()}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          title={isMaximized ? "Restore" : "Maximize"}
+          type="button"
+          onClick={handleToggleMaximize}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          title={isMaximized ? 'Restore' : 'Maximize'}
+          aria-pressed={isMaximized}
         >
-          {isMaximized ? <Copy className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          {isMaximized ? (
+            <ShrinkToSmallerWindowIcon className="h-4 w-4 shrink-0" />
+          ) : (
+            <MaximizeToFullWindowIcon className="h-4 w-4 shrink-0" />
+          )}
         </button>
         <button
-          onClick={() => WindowHide()}
-          className="flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
+          type="button"
+          onClick={() => Quit()}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
           title="Close"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" strokeWidth={2.25} aria-hidden />
         </button>
       </div>
     </div>

@@ -1,5 +1,3 @@
-import { Palette } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import {
@@ -11,8 +9,13 @@ import {
 } from '@/components/ui/select';
 import { formatTransferRate } from '../../features/speed-meter/formatters';
 import { useNetStore, widgetPresets } from '../../stores/useNetStore';
+import type { AppConfig, InterfaceSpeed } from '../../lib/contracts';
+import { SettingsSection } from './SettingsSection';
 
-function getCombinedSpeed(speeds: Record<string, { downloadBps: number; uploadBps: number }>) {
+const selectTriggerClass =
+  'h-10 w-full border-border bg-background text-sm font-normal shadow-none focus:ring-2 focus:ring-ring';
+
+function getCombinedSpeed(speeds: Record<string, InterfaceSpeed>) {
   return Object.values(speeds).reduce(
     (totals, speed) => ({
       downloadBps: totals.downloadBps + speed.downloadBps,
@@ -25,8 +28,16 @@ function getCombinedSpeed(speeds: Record<string, { downloadBps: number; uploadBp
   );
 }
 
-// Sub-component to prevent the sliders from re-rendering every 500ms when speeds update
-function SpeedValues({ config }: { config: any }) {
+function resolvePreset(widgetPresetId: string) {
+  return widgetPresets.find((entry) => entry.id === widgetPresetId) ?? widgetPresets[0];
+}
+
+function rgbFromHex(hex: string) {
+  const h = hex.slice(1);
+  return `${parseInt(h.slice(0, 2), 16)}, ${parseInt(h.slice(2, 4), 16)}, ${parseInt(h.slice(4, 6), 16)}`;
+}
+
+function SpeedValues({ config }: { config: AppConfig }) {
   const speeds = useNetStore((state) => state.speeds);
   const selectedSpeed = config.selectedInterface
     ? speeds[config.selectedInterface] ?? getCombinedSpeed(speeds)
@@ -38,22 +49,32 @@ function SpeedValues({ config }: { config: any }) {
   return (
     <>
       {config.showDownload && (
-        <div className="flex items-center gap-1.5 font-bold tabular-nums tracking-tight">
-          <span className="text-blue-400 font-black" aria-hidden="true">↓</span>
-          <span style={{ opacity: config.widgetTextOpacity }}>{download.value}{download.unit}</span>
+        <div className="flex items-center gap-1.5 font-semibold tabular-nums tracking-tight">
+          <span className="text-blue-400" aria-hidden>
+            ↓
+          </span>
+          <span style={{ opacity: config.widgetTextOpacity }}>
+            {download.value}
+            {download.unit}
+          </span>
         </div>
       )}
       {config.showUpload && (
-        <div className="flex items-center gap-1.5 font-bold tabular-nums tracking-tight">
-          <span className="text-emerald-400 font-black" aria-hidden="true">↑</span>
-          <span style={{ opacity: config.widgetTextOpacity }}>{upload.value}{upload.unit}</span>
+        <div className="flex items-center gap-1.5 font-semibold tabular-nums tracking-tight">
+          <span className="text-emerald-400" aria-hidden>
+            ↑
+          </span>
+          <span style={{ opacity: config.widgetTextOpacity }}>
+            {upload.value}
+            {upload.unit}
+          </span>
         </div>
       )}
     </>
   );
 }
 
-function SpeedValuesLight({ config }: { config: any }) {
+function SpeedValuesLight({ config }: { config: AppConfig }) {
   const speeds = useNetStore((state) => state.speeds);
   const selectedSpeed = config.selectedInterface
     ? speeds[config.selectedInterface] ?? getCombinedSpeed(speeds)
@@ -65,15 +86,25 @@ function SpeedValuesLight({ config }: { config: any }) {
   return (
     <>
       {config.showDownload && (
-        <div className="flex items-center gap-1.5 font-bold tabular-nums tracking-tight">
-          <span className="text-blue-500 font-black" aria-hidden="true">↓</span>
-          <span style={{ opacity: config.widgetTextOpacity }}>{download.value}{download.unit}</span>
+        <div className="flex items-center gap-1.5 font-semibold tabular-nums tracking-tight">
+          <span className="text-blue-600" aria-hidden>
+            ↓
+          </span>
+          <span style={{ opacity: config.widgetTextOpacity }}>
+            {download.value}
+            {download.unit}
+          </span>
         </div>
       )}
       {config.showUpload && (
-        <div className="flex items-center gap-1.5 font-bold tabular-nums tracking-tight">
-          <span className="text-emerald-500 font-black" aria-hidden="true">↑</span>
-          <span style={{ opacity: config.widgetTextOpacity }}>{upload.value}{upload.unit}</span>
+        <div className="flex items-center gap-1.5 font-semibold tabular-nums tracking-tight">
+          <span className="text-emerald-600" aria-hidden>
+            ↑
+          </span>
+          <span style={{ opacity: config.widgetTextOpacity }}>
+            {upload.value}
+            {upload.unit}
+          </span>
         </div>
       )}
     </>
@@ -83,55 +114,37 @@ function SpeedValuesLight({ config }: { config: any }) {
 export function WidgetCustomization() {
   const config = useNetStore((state) => state.config);
   const updateConfig = useNetStore((state) => state.updateConfig);
+  const preset = resolvePreset(config.widgetPreset);
+
+  const darkBg = `rgba(${rgbFromHex(preset.dark.bg)}, ${config.widgetBgOpacity})`;
+  const lightBg = `rgba(${rgbFromHex(preset.light.bg)}, ${config.widgetBgOpacity})`;
 
   return (
-    <Card className="relative overflow-hidden border-white/5 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-xl mt-6">
-      <CardHeader className="relative z-10">
-        <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-500 ring-1 ring-purple-500/20">
-            <Palette className="h-4 w-4" aria-hidden="true" />
-          </div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-purple-500 dark:text-purple-400">
-            Widget Customization
-          </p>
-        </div>
-        <CardTitle className="text-2xl mt-1 font-bold">
-          Appearance preview &amp; controls
-        </CardTitle>
-        <CardDescription className="text-sm text-muted-foreground/80 font-medium">
-          Configure the widget visual style while we keep the first release focused
-          on a stable main window monitor. These settings are saved now and the
-          floating widget behavior will land in the next phase.
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Dark Preview */}
-          <div className="space-y-3 group">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">Dark Desktop Preview</span>
-            <div className="relative rounded-xl border border-white/10 bg-slate-900 overflow-hidden flex flex-col min-h-[160px] shadow-inner">
-              {/* Fake Window Header */}
-              <div className="h-6 w-full bg-black/40 backdrop-blur-md flex items-center px-3 gap-1.5 border-b border-white/5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
+    <div className="space-y-0">
+      <SettingsSection
+        title="Preview"
+        description="Approximate look of the floating widget on dark and light desktops."
+      >
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Dark</p>
+            <div className="flex min-h-[140px] flex-col overflow-hidden rounded-lg border border-border bg-zinc-950">
+              <div className="flex h-7 shrink-0 items-center gap-1.5 border-b border-white/10 px-2.5">
+                <span className="h-2 w-2 rounded-full bg-white/20" />
+                <span className="h-2 w-2 rounded-full bg-white/20" />
+                <span className="h-2 w-2 rounded-full bg-white/20" />
               </div>
-              {/* Faux Wallpaper background */}
-              <div className="flex-1 relative flex items-center justify-center bg-[radial-gradient(ellipse_at_bottom_right,_var(--tw-gradient-stops))] from-blue-900/40 via-slate-900 to-black">
-                <div className="absolute inset-0 bg-[radial-gradient(#ffffff0a_1px,transparent_1px)] [background-size:12px_12px]" />
+              <div className="flex flex-1 items-center justify-center bg-zinc-900/90 p-4">
                 <div
-                  className="relative z-10 transition-[font-size,color,background-color,border-color,opacity,box-shadow,transform] duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.5)] group-hover:scale-105"
+                  className="rounded-full border border-white/10 px-4 py-1.5 shadow-lg transition-[font-size,opacity,background-color,color] duration-200"
                   style={{
                     fontSize: `${config.widgetFontSize}px`,
-                    color: (widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0]).dark.text,
+                    color: preset.dark.text,
                     opacity: config.widgetOpacity,
-                    backgroundColor: `rgba(${parseInt((widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0]).dark.bg.slice(1, 3), 16)}, ${parseInt((widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0]).dark.bg.slice(3, 5), 16)}, ${parseInt((widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0]).dark.bg.slice(5, 7), 16)}, ${config.widgetBgOpacity})`,
-                    borderRadius: '9999px',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    backgroundColor: darkBg,
                   }}
                 >
-                  <div className="flex items-center gap-4 px-4 py-1.5">
+                  <div className="flex items-center gap-4">
                     <SpeedValues config={config} />
                   </div>
                 </div>
@@ -139,31 +152,25 @@ export function WidgetCustomization() {
             </div>
           </div>
 
-          {/* Light Preview */}
-          <div className="space-y-3 group">
-            <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-muted-foreground ml-1">Light Desktop Preview</span>
-            <div className="relative rounded-xl border border-black/10 bg-slate-100 overflow-hidden flex flex-col min-h-[160px] shadow-inner">
-              {/* Fake Window Header */}
-              <div className="h-6 w-full bg-white/60 backdrop-blur-md flex items-center px-3 gap-1.5 border-b border-black/5">
-                <div className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                <div className="w-2.5 h-2.5 rounded-full bg-yellow-400" />
-                <div className="w-2.5 h-2.5 rounded-full bg-green-400" />
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Light</p>
+            <div className="flex min-h-[140px] flex-col overflow-hidden rounded-lg border border-border bg-zinc-100">
+              <div className="flex h-7 shrink-0 items-center gap-1.5 border-b border-black/10 px-2.5">
+                <span className="h-2 w-2 rounded-full bg-black/15" />
+                <span className="h-2 w-2 rounded-full bg-black/15" />
+                <span className="h-2 w-2 rounded-full bg-black/15" />
               </div>
-              {/* Faux Wallpaper background */}
-              <div className="flex-1 relative flex items-center justify-center bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-blue-100 via-slate-100 to-white">
-                <div className="absolute inset-0 bg-[radial-gradient(#0000000a_1px,transparent_1px)] [background-size:12px_12px]" />
+              <div className="flex flex-1 items-center justify-center bg-white p-4">
                 <div
-                  className="relative z-10 transition-[font-size,color,background-color,border-color,opacity,box-shadow,transform] duration-300 shadow-[0_8px_32px_rgba(0,0,0,0.1)] group-hover:scale-105"
+                  className="rounded-full border border-black/10 px-4 py-1.5 shadow-md transition-[font-size,opacity,background-color,color] duration-200"
                   style={{
                     fontSize: `${config.widgetFontSize}px`,
-                    color: (widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0]).light.text,
+                    color: preset.light.text,
                     opacity: config.widgetOpacity,
-                    backgroundColor: `rgba(${parseInt((widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0]).light.bg.slice(1, 3), 16)}, ${parseInt((widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0]).light.bg.slice(3, 5), 16)}, ${parseInt((widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0]).light.bg.slice(5, 7), 16)}, ${config.widgetBgOpacity})`,
-                    borderRadius: '9999px',
-                    border: '1px solid rgba(0, 0, 0, 0.05)',
+                    backgroundColor: lightBg,
                   }}
                 >
-                  <div className="flex items-center gap-4 px-4 py-1.5">
+                  <div className="flex items-center gap-4">
                     <SpeedValuesLight config={config} />
                   </div>
                 </div>
@@ -171,37 +178,38 @@ export function WidgetCustomization() {
             </div>
           </div>
         </div>
-      </CardContent>
+      </SettingsSection>
 
-      <CardContent className="space-y-6 pt-2 relative z-10">
-        {/* Controls Grid */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {/* Widget Preset */}
-          <div className="space-y-3 rounded-xl border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/20 p-5 shadow-sm transition-all duration-200 hover:bg-white/80 dark:hover:bg-white/5">
-            <Label htmlFor="widget-preset" className="text-base font-semibold">Color Preset</Label>
+      <SettingsSection title="Style" description="Color preset and type size for the widget.">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="widget-preset" className="text-sm font-medium text-foreground">
+              Color preset
+            </Label>
             <Select
               value={config.widgetPreset}
               onValueChange={(value) => void updateConfig({ widgetPreset: value })}
             >
-              <SelectTrigger id="widget-preset" className="w-full h-11 bg-white/50 dark:bg-black/20 backdrop-blur-sm border-white/10 dark:border-white/5 transition-all hover:bg-white/80 dark:hover:bg-white/10 font-medium">
+              <SelectTrigger id="widget-preset" className={selectTriggerClass}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {widgetPresets.map(p => (
-                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                {widgetPresets.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground/80 mt-1">
-              Presets automatically adapt to your app's Light/Dark mode.
-            </p>
+            <p className="text-xs text-muted-foreground">Pairs with your app light/dark mode.</p>
           </div>
 
-          {/* Font size */}
-          <div className="space-y-4 rounded-xl border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/20 p-5 shadow-sm transition-all duration-200 hover:bg-white/80 dark:hover:bg-white/5">
-            <div className="flex items-center justify-between">
-              <Label id="font-size-label" className="text-base font-semibold">Font size</Label>
-              <span className="text-sm font-bold text-primary tabular-nums bg-primary/10 px-2 py-1 rounded-md ring-1 ring-primary/20">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label id="font-size-label" className="text-sm font-medium text-foreground">
+                Font size
+              </Label>
+              <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium tabular-nums text-foreground">
                 {config.widgetFontSize}px
               </span>
             </div>
@@ -211,74 +219,79 @@ export function WidgetCustomization() {
               step={1}
               value={[config.widgetFontSize]}
               aria-labelledby="font-size-label"
-              className="touch-manipulation py-2"
+              className="touch-manipulation"
               onValueChange={([value]) => {
                 void updateConfig({ widgetFontSize: value });
               }}
             />
           </div>
+        </div>
+      </SettingsSection>
 
-          {/* X Offset */}
-          <div className="space-y-4 rounded-xl border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/20 p-5 shadow-sm transition-all duration-200 hover:bg-white/80 dark:hover:bg-white/5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="widget-x" className="text-base font-semibold">Horizontal Position (X)</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="widget-x"
-                  type="number"
-                  className="w-16 h-8 rounded-md border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/40 px-2 text-right text-sm font-semibold focus:ring-2 focus:ring-primary focus:outline-none"
-                  value={config.widgetX}
-                  onChange={(e) => void updateConfig({ widgetX: parseInt(e.target.value) || 0 })}
-                />
-                <span className="text-xs text-muted-foreground/80 font-bold uppercase tracking-wider">px</span>
-              </div>
+      <SettingsSection title="Position" description="Widget offset from the top-left of the screen (pixels).">
+        <div className="grid gap-5 sm:grid-cols-2">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="widget-x" className="text-sm font-medium text-foreground">
+                Horizontal (X)
+              </Label>
+              <input
+                id="widget-x"
+                type="number"
+                className="h-9 w-[4.5rem] rounded-md border border-border bg-background px-2 text-right text-sm tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={config.widgetX}
+                onChange={(e) => void updateConfig({ widgetX: parseInt(e.target.value, 10) || 0 })}
+              />
             </div>
             <Slider
               min={-500}
               max={5000}
               step={1}
               value={[config.widgetX]}
-              aria-label="Horizontal Position (X)"
-              className="touch-manipulation py-2"
+              aria-label="Horizontal position"
+              className="touch-manipulation"
               onValueChange={([value]) => {
                 void updateConfig({ widgetX: value });
               }}
             />
           </div>
 
-          {/* Y Offset */}
-          <div className="space-y-4 rounded-xl border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/20 p-5 shadow-sm transition-all duration-200 hover:bg-white/80 dark:hover:bg-white/5">
-            <div className="flex items-center justify-between">
-              <Label htmlFor="widget-y" className="text-base font-semibold">Vertical Position (Y)</Label>
-              <div className="flex items-center gap-2">
-                <input
-                  id="widget-y"
-                  type="number"
-                  className="w-16 h-8 rounded-md border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/40 px-2 text-right text-sm font-semibold focus:ring-2 focus:ring-primary focus:outline-none"
-                  value={config.widgetY}
-                  onChange={(e) => void updateConfig({ widgetY: parseInt(e.target.value) || 0 })}
-                />
-                <span className="text-xs text-muted-foreground/80 font-bold uppercase tracking-wider">px</span>
-              </div>
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label htmlFor="widget-y" className="text-sm font-medium text-foreground">
+                Vertical (Y)
+              </Label>
+              <input
+                id="widget-y"
+                type="number"
+                className="h-9 w-[4.5rem] rounded-md border border-border bg-background px-2 text-right text-sm tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                value={config.widgetY}
+                onChange={(e) => void updateConfig({ widgetY: parseInt(e.target.value, 10) || 0 })}
+              />
             </div>
             <Slider
               min={-500}
               max={5000}
               step={1}
               value={[config.widgetY]}
-              aria-label="Vertical Position (Y)"
-              className="touch-manipulation py-2"
+              aria-label="Vertical position"
+              className="touch-manipulation"
               onValueChange={([value]) => {
                 void updateConfig({ widgetY: value });
               }}
             />
           </div>
+        </div>
+      </SettingsSection>
 
-          {/* Background opacity */}
-          <div className="space-y-4 rounded-xl border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/20 p-5 shadow-sm transition-all duration-200 hover:bg-white/80 dark:hover:bg-white/5">
-            <div className="flex items-center justify-between">
-              <Label id="bg-opacity-label" className="text-base font-semibold">Background opacity</Label>
-              <span className="text-sm font-bold text-primary tabular-nums bg-primary/10 px-2 py-1 rounded-md ring-1 ring-primary/20">
+      <SettingsSection title="Opacity" description="Layering for background, text, and the widget as a whole.">
+        <div className="space-y-5">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label id="bg-opacity-label" className="text-sm font-medium text-foreground">
+                Widget background
+              </Label>
+              <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
                 {Math.round(config.widgetBgOpacity * 100)}%
               </span>
             </div>
@@ -288,18 +301,19 @@ export function WidgetCustomization() {
               step={1}
               value={[Math.round(config.widgetBgOpacity * 100)]}
               aria-labelledby="bg-opacity-label"
-              className="touch-manipulation py-2"
+              className="touch-manipulation"
               onValueChange={([value]) => {
                 void updateConfig({ widgetBgOpacity: value / 100 });
               }}
             />
           </div>
 
-          {/* Text opacity */}
-          <div className="space-y-4 rounded-xl border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/20 p-5 shadow-sm transition-all duration-200 hover:bg-white/80 dark:hover:bg-white/5">
-            <div className="flex items-center justify-between">
-              <Label id="text-opacity-label" className="text-base font-semibold">Text opacity</Label>
-              <span className="text-sm font-bold text-primary tabular-nums bg-primary/10 px-2 py-1 rounded-md ring-1 ring-primary/20">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label id="text-opacity-label" className="text-sm font-medium text-foreground">
+                Text
+              </Label>
+              <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
                 {Math.round(config.widgetTextOpacity * 100)}%
               </span>
             </div>
@@ -309,21 +323,19 @@ export function WidgetCustomization() {
               step={1}
               value={[Math.round(config.widgetTextOpacity * 100)]}
               aria-labelledby="text-opacity-label"
-              className="touch-manipulation py-2"
+              className="touch-manipulation"
               onValueChange={([value]) => {
                 void updateConfig({ widgetTextOpacity: value / 100 });
               }}
             />
           </div>
 
-          {/* Overall widget opacity */}
-          <div className="space-y-4 sm:col-span-2 rounded-xl border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/20 p-5 shadow-sm transition-all duration-200 hover:bg-white/80 dark:hover:bg-white/5">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label id="overall-opacity-label" className="text-base font-semibold">Overall widget visibility</Label>
-                <p className="text-xs text-muted-foreground/80">Controls the master opacity of the floating window.</p>
-              </div>
-              <span className="text-sm font-bold text-primary tabular-nums bg-primary/10 px-2 py-1 rounded-md ring-1 ring-primary/20">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <Label id="overall-opacity-label" className="text-sm font-medium text-foreground">
+                Whole widget
+              </Label>
+              <span className="rounded-md bg-muted px-2 py-0.5 text-xs font-medium tabular-nums">
                 {Math.round(config.widgetOpacity * 100)}%
               </span>
             </div>
@@ -333,14 +345,14 @@ export function WidgetCustomization() {
               step={1}
               value={[Math.round(config.widgetOpacity * 100)]}
               aria-labelledby="overall-opacity-label"
-              className="touch-manipulation py-2"
+              className="touch-manipulation"
               onValueChange={([value]) => {
                 void updateConfig({ widgetOpacity: value / 100 });
               }}
             />
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </SettingsSection>
+    </div>
   );
 }

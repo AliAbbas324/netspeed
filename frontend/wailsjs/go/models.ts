@@ -16,6 +16,7 @@ export namespace config {
 	    appPreset: string;
 	    widgetPreset: string;
 	    hideWidgetOnFocus: boolean;
+	    titleBarLogoRoundedCorners?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -38,6 +39,7 @@ export namespace config {
 	        this.appPreset = source["appPreset"];
 	        this.widgetPreset = source["widgetPreset"];
 	        this.hideWidgetOnFocus = source["hideWidgetOnFocus"];
+	        this.titleBarLogoRoundedCorners = source["titleBarLogoRoundedCorners"];
 	    }
 	}
 

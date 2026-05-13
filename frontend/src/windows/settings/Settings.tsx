@@ -3,18 +3,36 @@ import { SpeedCards } from './SpeedCards';
 import { DisplayOptions } from './DisplayOptions';
 import { WidgetCustomization } from './WidgetCustomization';
 import { StatusBanner } from './StatusBanner';
+import { SettingsSection } from './SettingsSection';
 
 export function Settings() {
   return (
-    <main className="relative flex-1 overflow-y-auto overflow-x-hidden bg-background p-5 md:p-7">
-      {/* Deep Space / Mesh Gradient Overlay */}
-      <div className="absolute top-0 left-0 w-[150vw] h-[150vh] bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-primary/10 via-background to-background -z-10 animate-pulse-glow" />
-      <div className="relative z-10 mx-auto max-w-[1180px] space-y-6 pb-8">
+    <main className="relative flex-1 overflow-y-auto overflow-x-hidden bg-background">
+      <div className="mx-auto max-w-3xl px-4 py-8 pb-12 sm:px-6">
         <HeroHeader />
-        <SpeedCards />
-        <DisplayOptions />
-        <WidgetCustomization />
-        <StatusBanner />
+
+        <div className="mt-10 space-y-10">
+          <SettingsSection
+            title="Live traffic"
+            description="Real-time rates for the interface or combined total you selected below."
+          >
+            <SpeedCards />
+          </SettingsSection>
+
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            <div className="p-6 sm:p-8">
+              <DisplayOptions />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card shadow-sm">
+            <div className="p-6 sm:p-8">
+              <WidgetCustomization />
+            </div>
+          </div>
+
+          <StatusBanner />
+        </div>
       </div>
     </main>
   );

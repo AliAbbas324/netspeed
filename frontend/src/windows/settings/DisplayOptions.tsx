@@ -1,7 +1,5 @@
-import { Settings2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
-import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import {
   Select,
@@ -11,6 +9,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useNetStore, appPresets } from '../../stores/useNetStore';
+import { SettingsSection } from './SettingsSection';
+
+const selectTriggerClass =
+  'h-10 w-full border-border bg-background text-sm font-normal shadow-none focus:ring-2 focus:ring-ring';
 
 function getDisplayMode(showDownload: boolean, showUpload: boolean) {
   if (showDownload && showUpload) return 'both';
@@ -18,6 +20,8 @@ function getDisplayMode(showDownload: boolean, showUpload: boolean) {
   if (showUpload) return 'upload';
   return 'both';
 }
+
+type AppThemeMode = 'light' | 'dark' | 'system';
 
 export function DisplayOptions() {
   const config = useNetStore((state) => state.config);
@@ -28,142 +32,156 @@ export function DisplayOptions() {
   const selectedInterfaceValue = config.selectedInterface || '__all__';
 
   return (
-    <div className="relative group">
-      <div className="absolute -inset-1 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent opacity-0 blur-xl transition-all duration-700 group-hover:opacity-100" />
+    <div className="space-y-0">
+      <SettingsSection
+        title="Monitoring"
+        description="Choose what is measured and how often counters refresh."
+      >
+        <div className="space-y-2">
+          <Label htmlFor="interface-select" className="text-sm font-medium text-foreground">
+            Network interface
+          </Label>
+          <Select
+            value={selectedInterfaceValue}
+            onValueChange={(value) => {
+              void updateConfig({
+                selectedInterface: value === '__all__' ? '' : value,
+              });
+            }}
+          >
+            <SelectTrigger id="interface-select" className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">All active interfaces</SelectItem>
+              {interfaces.map((networkInterface) => (
+                <SelectItem key={networkInterface} value={networkInterface}>
+                  {networkInterface}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-foreground">One adapter, or totals summed across adapters.</p>
+        </div>
 
-      <Card className="relative overflow-hidden border-white/5 dark:border-white/10 bg-white/40 dark:bg-black/40 backdrop-blur-2xl shadow-xl transition-all duration-300">
-        <CardHeader className="relative z-10 pb-4">
-          <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-primary/10 text-primary ring-1 ring-primary/20">
-              <Settings2 className="h-4 w-4" aria-hidden="true" />
+        <div className="space-y-2">
+          <Label htmlFor="display-mode" className="text-sm font-medium text-foreground">
+            Speeds shown
+          </Label>
+          <Select
+            value={displayMode}
+            onValueChange={(value) => {
+              if (value === 'download') {
+                void updateConfig({ showDownload: true, showUpload: false });
+              } else if (value === 'upload') {
+                void updateConfig({ showDownload: false, showUpload: true });
+              } else {
+                void updateConfig({ showDownload: true, showUpload: true });
+              }
+            }}
+          >
+            <SelectTrigger id="display-mode" className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="both">Download and upload</SelectItem>
+              <SelectItem value="download">Download only</SelectItem>
+              <SelectItem value="upload">Upload only</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label id="poll-interval-label" className="text-sm font-medium text-foreground">
+                Poll interval
+              </Label>
+              <p className="mt-0.5 text-xs text-muted-foreground">Sampling period for network counters.</p>
             </div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
-              Display Options
+            <span className="shrink-0 rounded-md bg-muted px-2 py-1 text-xs font-medium tabular-nums text-foreground">
+              {config.pollIntervalMs} ms
+            </span>
+          </div>
+          <Slider
+            min={500}
+            max={5000}
+            step={500}
+            value={[config.pollIntervalMs]}
+            aria-labelledby="poll-interval-label"
+            className="touch-manipulation py-1"
+            onValueChange={([value]) => {
+              void updateConfig({ pollIntervalMs: value });
+            }}
+          />
+        </div>
+      </SettingsSection>
+
+      <SettingsSection
+        title="Appearance"
+        description="Theme, accent preset, and a small detail for the custom title bar."
+      >
+        <div className="space-y-2">
+          <Label htmlFor="theme-mode" className="text-sm font-medium text-foreground">
+            Color mode
+          </Label>
+          <Select
+            value={config.theme}
+            onValueChange={(value) => {
+              void updateConfig({ theme: value as AppThemeMode });
+            }}
+          >
+            <SelectTrigger id="theme-mode" className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="system">Match system</SelectItem>
+              <SelectItem value="light">Light</SelectItem>
+              <SelectItem value="dark">Dark</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="app-preset" className="text-sm font-medium text-foreground">
+            Accent preset
+          </Label>
+          <Select
+            value={config.appPreset}
+            onValueChange={(value) => {
+              void updateConfig({ appPreset: value });
+            }}
+          >
+            <SelectTrigger id="app-preset" className={selectTriggerClass}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {appPresets.map((preset) => (
+                <SelectItem key={preset.id} value={preset.id}>
+                  {preset.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex items-center justify-between gap-4 rounded-lg border border-border/80 bg-muted/20 px-4 py-3">
+          <div className="min-w-0">
+            <Label htmlFor="title-bar-logo-round" className="text-sm font-medium text-foreground">
+              Rounded app icon
+            </Label>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Title bar, favicon, and other in-app marks use the same asset; this toggles corner radius on the tile.
             </p>
           </div>
-          <CardTitle className="text-2xl mt-1 font-bold">Phase 1 controls</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6 relative z-10">
-          <div className="space-y-3">
-            <Label htmlFor="interface-select" className="text-sm font-semibold">Network interface</Label>
-            <Select
-              value={selectedInterfaceValue}
-              onValueChange={(value) => {
-                void updateConfig({
-                  selectedInterface: value === '__all__' ? '' : value,
-                });
-              }}
-            >
-              <SelectTrigger id="interface-select" className="w-full h-11 bg-white/50 dark:bg-black/20 backdrop-blur-sm border-white/10 dark:border-white/5 transition-all hover:bg-white/80 dark:hover:bg-white/10 font-medium">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">All active interfaces</SelectItem>
-                {interfaces.map((networkInterface) => (
-                  <SelectItem key={networkInterface} value={networkInterface}>
-                    {networkInterface}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground/80">
-              Choose one adapter or keep the combined total across every active interface.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            <Label htmlFor="display-mode" className="text-sm font-semibold">Speed display mode</Label>
-            <Select
-              value={displayMode}
-              onValueChange={(value) => {
-                if (value === 'download') {
-                  void updateConfig({ showDownload: true, showUpload: false });
-                } else if (value === 'upload') {
-                  void updateConfig({ showDownload: false, showUpload: true });
-                } else {
-                  void updateConfig({ showDownload: true, showUpload: true });
-                }
-              }}
-            >
-              <SelectTrigger id="display-mode" className="w-full h-11 bg-white/50 dark:bg-black/20 backdrop-blur-sm border-white/10 dark:border-white/5 transition-all hover:bg-white/80 dark:hover:bg-white/10 font-medium">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="both">Download and upload</SelectItem>
-                <SelectItem value="download">Download only</SelectItem>
-                <SelectItem value="upload">Upload only</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator className="bg-border/40" />
-
-          <div className="space-y-3">
-            <Label htmlFor="app-preset" className="text-sm font-semibold">App theme preset</Label>
-            <Select
-              value={config.appPreset}
-              onValueChange={(value) => {
-                void updateConfig({ appPreset: value });
-              }}
-            >
-              <SelectTrigger id="app-preset" className="w-full h-11 bg-white/50 dark:bg-black/20 backdrop-blur-sm border-white/10 dark:border-white/5 transition-all hover:bg-white/80 dark:hover:bg-white/10 font-medium">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {appPresets.map((preset) => (
-                  <SelectItem key={preset.id} value={preset.id}>{preset.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-3">
-            <Label htmlFor="theme-mode" className="text-sm font-semibold">Interface mode</Label>
-            <Select
-              value={config.theme}
-              onValueChange={(value) => {
-                void updateConfig({ theme: value as AppThemeMode });
-              }}
-            >
-              <SelectTrigger id="theme-mode" className="w-full h-11 bg-white/50 dark:bg-black/20 backdrop-blur-sm border-white/10 dark:border-white/5 transition-all hover:bg-white/80 dark:hover:bg-white/10 font-medium">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="system">System (Match OS)</SelectItem>
-                <SelectItem value="light">Light mode</SelectItem>
-                <SelectItem value="dark">Dark mode</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator className="bg-border/40" />
-
-          <div className="space-y-4 rounded-xl border border-white/10 dark:border-white/5 bg-white/50 dark:bg-black/20 p-5 shadow-sm transition-all duration-200 hover:bg-white/80 dark:hover:bg-white/5">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <Label id="poll-interval-label" className="text-base font-semibold">Poll interval</Label>
-                <p className="text-xs text-muted-foreground/80">How often the desktop app samples fresh network counters.</p>
-              </div>
-              <span className="text-sm font-bold text-primary tabular-nums bg-primary/10 px-2 py-1 rounded-md ring-1 ring-primary/20">
-                {config.pollIntervalMs} ms
-              </span>
-            </div>
-            <Slider
-              min={500}
-              max={5000}
-              step={500}
-              value={[config.pollIntervalMs]}
-              aria-labelledby="poll-interval-label"
-              className="touch-manipulation py-2"
-              onValueChange={([value]) => {
-                void updateConfig({ pollIntervalMs: value });
-              }}
-            />
-          </div>
-        </CardContent>
-      </Card>
+          <Switch
+            id="title-bar-logo-round"
+            checked={config.titleBarLogoRoundedCorners}
+            onCheckedChange={(checked) => void updateConfig({ titleBarLogoRoundedCorners: checked })}
+            className="shrink-0"
+          />
+        </div>
+      </SettingsSection>
     </div>
   );
 }
-
-type AppThemeMode = 'light' | 'dark' | 'system';

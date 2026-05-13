@@ -2,9 +2,10 @@ import { useEffect, useRef } from 'react';
 import { formatTransferRate } from '../../features/speed-meter/formatters';
 import { useNetStore, widgetPresets } from '../../stores/useNetStore';
 import { UpdateWindowSize } from '../../lib/backend';
+import type { AppConfig, InterfaceSpeed } from '../../lib/contracts';
 import { ScreenGetAll } from '../../../wailsjs/runtime/runtime';
 
-function getCombinedSpeed(speeds: Record<string, { downloadBps: number; uploadBps: number }>) {
+function getCombinedSpeed(speeds: Record<string, InterfaceSpeed>) {
   return Object.values(speeds).reduce(
     (totals, speed) => ({
       downloadBps: totals.downloadBps + speed.downloadBps,
@@ -15,7 +16,7 @@ function getCombinedSpeed(speeds: Record<string, { downloadBps: number; uploadBp
 }
 
 // Sub-component to only re-render the numbers on speed change
-function SpeedValues({ config }: { config: any }) {
+function SpeedValues({ config }: { config: AppConfig }) {
   const speeds = useNetStore((state) => state.speeds);
 
   const selectedSpeed = config.selectedInterface
@@ -92,7 +93,7 @@ export function Widget() {
     ? window.matchMedia('(prefers-color-scheme: dark)').matches
     : config.theme === 'dark';
 
-  const preset = widgetPresets.find(p => p.id === config.widgetPreset) || widgetPresets[0];
+  const preset = widgetPresets.find((entry) => entry.id === config.widgetPreset) || widgetPresets[0];
   const themeColors = isDark ? preset.dark : preset.light;
 
   const parseHex = (hex: string) => {
@@ -116,7 +117,7 @@ export function Widget() {
           border: '1px solid rgba(255, 255, 255, 0.1)',
           fontSize: `${config.widgetFontSize}px`,
           color: themeColors.text,
-        } as any}
+        }}
       >
         <SpeedValues config={config} />
       </div>

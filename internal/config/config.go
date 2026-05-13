@@ -31,26 +31,29 @@ type Config struct {
 	AppPreset         string  `json:"appPreset"`
 	WidgetPreset      string  `json:"widgetPreset"`
 	HideWidgetOnFocus bool    `json:"hideWidgetOnFocus"`
+	// TitleBarLogoRoundedCorners when nil means “unset” (treat as true for legacy configs).
+	TitleBarLogoRoundedCorners *bool `json:"titleBarLogoRoundedCorners,omitempty"`
 }
 
 // Default returns the baseline configuration used for a fresh install.
 func Default() Config {
 	return Config{
-		SelectedInterface: "",
-		PollIntervalMs:    defaultPollIntervalMs,
-		ShowDownload:      true,
-		ShowUpload:        true,
-		ShowWidget:        false,
-		WidgetFontSize:    defaultWidgetFontSize,
-		WidgetBgOpacity:   0.8,
-		WidgetOpacity:     1,
-		WidgetTextOpacity: 1,
-		WidgetX:           -1,
-		WidgetY:           -1,
-		Theme:             "system",
-		AppPreset:         "default",
-		WidgetPreset:      "classic",
-		HideWidgetOnFocus: true,
+		SelectedInterface:          "",
+		PollIntervalMs:             defaultPollIntervalMs,
+		ShowDownload:               true,
+		ShowUpload:                 true,
+		ShowWidget:                 false,
+		WidgetFontSize:             defaultWidgetFontSize,
+		WidgetBgOpacity:            0.8,
+		WidgetOpacity:              1,
+		WidgetTextOpacity:          1,
+		WidgetX:                    -1,
+		WidgetY:                    -1,
+		Theme:                      "system",
+		AppPreset:                  "default",
+		WidgetPreset:               "classic",
+		HideWidgetOnFocus:          true,
+		TitleBarLogoRoundedCorners: boolPtr(true),
 	}
 }
 
@@ -153,4 +156,12 @@ func (c *Config) applyDefaults() {
 	if c.AppPreset == "" {
 		c.AppPreset = "default"
 	}
+
+	if c.TitleBarLogoRoundedCorners == nil {
+		c.TitleBarLogoRoundedCorners = boolPtr(true)
+	}
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
