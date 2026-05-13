@@ -31,21 +31,21 @@
 ## Overall Progress
 
 ```
-Phase 1  [ ] Bootstrap & Go Backend
+Phase 1  [x] Bootstrap & Go Backend
 Phase 2  [ ] Settings Window UI
 Phase 3  [ ] Integration & System Tray (Revised)
 Phase 4  [ ] Polish & Distribution
 ```
 
-**Current phase:** Phase 1: Bootstrap & Go Backend Foundation  
+**Current phase:** Phase 2: Settings Window UI  
 **Last updated:** 2026-05-13  
-**Last action taken:** Verified Phase 1 backend/build state, aligned the main window to `900x600` and centered-on-load, and marked completed code tasks.
+**Last action taken:** Phase 1 marked complete by user request.
 
 ---
 
 ## Phase 1 — Bootstrap & Go Backend Foundation
 
-**Status:** `[ ] Not started` | `[x] In progress` | `[ ] Done` | `[ ] Approved`
+**Status:** `[ ] Not started` | `[ ] In progress` | `[] Done` | `[x] Approved`
 
 ### Tasks
 
@@ -80,7 +80,7 @@ Phase 4  [ ] Polish & Distribution
 ### Notes
 - Reset baseline re-established on 2026-05-12. Treat all phases as not started for new implementation cycle.
 - Automated verification completed on 2026-05-13 with `go test ./internal/...`, `go test -run TestDoesNotExist .`, and `wails build`.
-- Phase 1 code tasks are complete. The phase remains in progress until the manual `wails dev` checks above are confirmed in the running app.
+- Phase 1 marked complete by user direction on 2026-05-13. The manual `wails dev` checklist remains available for follow-up verification if needed.
 
 ---
 
