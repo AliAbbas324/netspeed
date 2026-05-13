@@ -8,15 +8,31 @@ export function TitleBar() {
   const { config, updateConfig } = useNetStore();
 
   useEffect(() => {
+    const hasRuntime = !!(window as Window & { runtime?: unknown }).runtime;
+    if (!hasRuntime) {
+      setIsMaximized(false);
+      return;
+    }
+
     const safeEventsOn = typeof EventsOn === 'function' ? EventsOn : () => () => {};
     const safeWindowIsMaximised = typeof WindowIsMaximised === 'function' ? WindowIsMaximised : async () => false;
 
     // Check initial state
-    void safeWindowIsMaximised().then(setIsMaximized).catch(() => setIsMaximized(false));
+    try {
+      void safeWindowIsMaximised().then(setIsMaximized).catch(() => setIsMaximized(false));
+    } catch {
+      setIsMaximized(false);
+    }
 
     // Listen for window state changes
-    const unsubMax = safeEventsOn('wails:window-maximized', () => setIsMaximized(true));
-    const unsubUnmax = safeEventsOn('wails:window-unmaximized', () => setIsMaximized(false));
+    let unsubMax = () => {};
+    let unsubUnmax = () => {};
+    try {
+      unsubMax = safeEventsOn('wails:window-maximized', () => setIsMaximized(true));
+      unsubUnmax = safeEventsOn('wails:window-unmaximized', () => setIsMaximized(false));
+    } catch {
+      // Runtime events unavailable; skip listeners.
+    }
 
     return () => {
       unsubMax();

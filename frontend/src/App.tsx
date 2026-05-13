@@ -1,18 +1,24 @@
+import { useEffect } from 'react';
+import { TitleBar } from './components/TitleBar';
+import { useNetStore } from './stores/useNetStore';
+import { Settings } from './windows/settings/Settings';
+
 function App() {
+  const initialize = useNetStore((state) => state.initialize);
+  const isLoading = useNetStore((state) => state.isLoading);
+
+  useEffect(() => {
+    void initialize();
+  }, [initialize]);
+
+  if (isLoading) {
+    return <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground">Loading NetSpeed...</div>;
+  }
+
   return (
-    <div style={{ 
-      width: '100%', 
-      height: '100%', 
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      color: '#fff', 
-      display: 'flex', 
-      alignItems: 'center', 
-      justifyContent: 'center', 
-      fontSize: '48px',
-      fontWeight: 'bold',
-      fontFamily: 'system-ui, -apple-system, sans-serif',
-    }}>
-      ✓ NetSpeed Ready
+    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground">
+      <TitleBar />
+      <Settings />
     </div>
   );
 }

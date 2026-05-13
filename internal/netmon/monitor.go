@@ -243,5 +243,14 @@ func shouldIgnoreInterface(name string) bool {
 
 	return lower == "lo" ||
 		lower == "loopback pseudo-interface" ||
-		strings.Contains(lower, "loopback")
+		strings.Contains(lower, "loopback") ||
+		strings.HasPrefix(lower, "docker") ||
+		strings.HasPrefix(lower, "br-") ||
+		strings.HasPrefix(lower, "veth") ||
+		strings.HasPrefix(lower, "virbr") ||
+		strings.HasPrefix(lower, "vboxnet") ||
+		strings.HasPrefix(lower, "vmnet") ||
+		strings.HasPrefix(lower, "zt") ||
+		strings.Contains(lower, "tailscale") ||
+		strings.Contains(lower, "virtual")
 }

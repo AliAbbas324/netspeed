@@ -29,7 +29,7 @@ function getCombinedSpeed(speeds: Record<string, { downloadBps: number; uploadBp
 function SpeedValues({ config }: { config: any }) {
   const speeds = useNetStore((state) => state.speeds);
   const selectedSpeed = config.selectedInterface
-    ? speeds[config.selectedInterface] ?? { downloadBps: 0, uploadBps: 0 }
+    ? speeds[config.selectedInterface] ?? getCombinedSpeed(speeds)
     : getCombinedSpeed(speeds);
 
   const download = formatTransferRate(selectedSpeed.downloadBps);
@@ -56,7 +56,7 @@ function SpeedValues({ config }: { config: any }) {
 function SpeedValuesLight({ config }: { config: any }) {
   const speeds = useNetStore((state) => state.speeds);
   const selectedSpeed = config.selectedInterface
-    ? speeds[config.selectedInterface] ?? { downloadBps: 0, uploadBps: 0 }
+    ? speeds[config.selectedInterface] ?? getCombinedSpeed(speeds)
     : getCombinedSpeed(speeds);
 
   const download = formatTransferRate(selectedSpeed.downloadBps);
@@ -99,8 +99,9 @@ export function WidgetCustomization() {
           Appearance preview &amp; controls
         </CardTitle>
         <CardDescription className="text-sm text-muted-foreground/80 font-medium">
-          Configure how the floating speed widget looks. Changes are saved
-          immediately and will be applied to the floating widget.
+          Configure the widget visual style while we keep the first release focused
+          on a stable main window monitor. These settings are saved now and the
+          floating widget behavior will land in the next phase.
         </CardDescription>
       </CardHeader>
       

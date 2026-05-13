@@ -31,21 +31,21 @@
 ## Overall Progress
 
 ```
-Phase 1  [x] Bootstrap & Go Backend
-Phase 2  [x] Settings Window UI
-Phase 3  [x] Integration & System Tray (Revised)
+Phase 1  [ ] Bootstrap & Go Backend
+Phase 2  [ ] Settings Window UI
+Phase 3  [ ] Integration & System Tray (Revised)
 Phase 4  [ ] Polish & Distribution
 ```
 
-**Current phase:** Phase 3 (Revised): System Tray & Widget Refinement  
-**Last updated:** 2026-04-25  
-**Last action taken:** Revisited Phase 3 plan to include System Tray, background operation, and enhanced widget customization.
+**Current phase:** Phase 1: Bootstrap & Go Backend Foundation  
+**Last updated:** 2026-05-13  
+**Last action taken:** Verified Phase 1 backend/build state, aligned the main window to `900x600` and centered-on-load, and marked completed code tasks.
 
 ---
 
 ## Phase 1 — Bootstrap & Go Backend Foundation
 
-**Status:** `[ ] Not started` | `[ ] In progress` | `[x] Done` | `[ ] Approved`
+**Status:** `[ ] Not started` | `[x] In progress` | `[ ] Done` | `[ ] Approved`
 
 ### Tasks
 
@@ -78,7 +78,9 @@ Phase 4  [ ] Polish & Distribution
 - [ ] Numbers change when download/upload activity is generated
 
 ### Notes
-- Phase 1 code is present and builds, but the manual Wails runtime checks above still need to be confirmed in a live app session before marking the phase approved.
+- Reset baseline re-established on 2026-05-12. Treat all phases as not started for new implementation cycle.
+- Automated verification completed on 2026-05-13 with `go test ./internal/...`, `go test -run TestDoesNotExist .`, and `wails build`.
+- Phase 1 code tasks are complete. The phase remains in progress until the manual `wails dev` checks above are confirmed in the running app.
 
 ---
 

@@ -1,37 +1,35 @@
 package main
 
 import (
-	_ "embed"
+	"context"
 	"log/slog"
 	"os"
-	"time"
+	"sync"
 
 	"speed-meter/internal/config"
 	"speed-meter/internal/netmon"
 
-	"github.com/wailsapp/wails/v3/pkg/application"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-//go:embed build/appicon.png
-var trayIcon []byte
+// AppState is the frontend-facing snapshot used by the Phase 1 UI.
+type AppState struct {
+	Speeds                 map[string]netmon.InterfaceSpeed `json:"speeds"`
+	Interfaces             []string                         `json:"interfaces"`
+	ErrorMessage           string                           `json:"errorMessage"`
+	SampledAt              string                           `json:"sampledAt"`
+	InterfaceCount         int                              `json:"interfaceCount"`
+	DownloadBytesPerSecond float64                          `json:"downloadBytesPerSecond"`
+	UploadBytesPerSecond   float64                          `json:"uploadBytesPerSecond"`
+}
 
-const (
-	speedUpdateEvent = "network:speed.updated"
-	speedErrorEvent  = "network:speed.error"
-	modeSetEvent     = "mode:set"
-)
-
-// App exposes the Go backend services to the Wails frontend.
+// App exposes backend functionality to the Wails frontend.
 type App struct {
-	logger       *slog.Logger
-	monitor      *netmon.Monitor
-	config       *config.Config
-	
-	mainWindow   application.Window
-	widgetWindow application.Window
-
-	eventLoopStop chan struct{}
-	eventLoopDone chan struct{}
+	ctx     context.Context
+	logger  *slog.Logger
+	mu      sync.RWMutex
+	monitor *netmon.Monitor
+	config  config.Config
 }
 
 // NewApp creates the application root and loads the persisted config.
@@ -48,39 +46,36 @@ func NewApp() *App {
 	return &App{
 		logger:  logger,
 		monitor: netmon.NewMonitor(cfg.PollIntervalMs),
-		config:  cfg,
+		config:  *cfg,
 	}
 }
 
-// SetWindows saves the window references for management.
-func (a *App) SetWindows(main, widget application.Window) {
-	a.mainWindow = main
-	a.widgetWindow = widget
-	
-	// Start the event loop after windows are set
+func (a *App) startup(ctx context.Context) {
+	a.ctx = ctx
 	a.monitor.Start()
-	a.startEventLoop()
 }
 
-// ToggleWidget starts or stops the widget window visibility.
-func (a *App) ToggleWidget(show bool) {
-	if a.widgetWindow == nil {
-		return
-	}
+func (a *App) domReady(ctx context.Context) {
+	runtime.WindowCenter(ctx)
+}
 
-	if show {
-		a.widgetWindow.Show()
-		a.config.ShowWidget = true
-		go setSkipTaskbar("NetSpeedWidget", true)
-	} else {
-		a.widgetWindow.Hide()
-		a.config.ShowWidget = false
-	}
+func (a *App) shutdown(ctx context.Context) {
+	a.monitor.Stop()
+}
 
-	if err := config.Save(*a.config); err != nil {
-		a.logger.Error("failed to save widget visibility", "error", err)
+// GetState returns the latest monitor snapshot for the frontend.
+func (a *App) GetState() AppState {
+	sample := a.monitor.GetSample()
+
+	return AppState{
+		Speeds:                 a.monitor.GetSpeeds(),
+		Interfaces:             a.monitor.ListInterfaces(),
+		ErrorMessage:           a.monitor.GetLastError(),
+		SampledAt:              sample.SampledAt,
+		InterfaceCount:         sample.InterfaceCount,
+		DownloadBytesPerSecond: sample.DownloadBytesPerSecond,
+		UploadBytesPerSecond:   sample.UploadBytesPerSecond,
 	}
-	application.Get().Event.Emit("config:updated", *a.config)
 }
 
 // GetSpeeds returns the latest per-interface transfer rates.
@@ -93,157 +88,39 @@ func (a *App) ListInterfaces() []string {
 	return a.monitor.ListInterfaces()
 }
 
-// GetConfig returns the latest configuration from disk.
+// GetConfig returns the in-memory configuration snapshot.
 func (a *App) GetConfig() config.Config {
-	cfg, err := config.Load()
-	if err == nil {
-		a.config = cfg
-	}
-	return *a.config
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+
+	return a.config
 }
 
-// SaveConfig persists frontend-driven settings updates.
-func (a *App) SaveConfig(next config.Config) error {
-	if next.ShowWidget != a.config.ShowWidget {
-		a.ToggleWidget(next.ShowWidget)
-	}
+// SaveConfig persists frontend-driven settings updates and restarts the monitor
+// when the polling interval changes.
+func (a *App) SaveConfig(next config.Config) (config.Config, error) {
+	current := a.GetConfig()
 
 	if err := config.Save(next); err != nil {
 		a.logger.Error("failed to save config", "error", err)
-		return err
+		return current, err
 	}
 
-	*a.config = next
-	application.Get().Event.Emit("config:updated", next)
-	return nil
-}
-
-// SetMainWindowFocus allows the settings window to notify Go when it gains or loses focus.
-func (a *App) SetMainWindowFocus(focused bool) {
-	if focused {
-		if a.mainWindow != nil {
-			a.mainWindow.Focus()
-		}
-		if a.config.HideWidgetOnFocus && a.config.ShowWidget && a.widgetWindow != nil {
-			a.widgetWindow.Hide()
-		}
-		return
+	loaded, err := config.Load()
+	if err != nil {
+		a.logger.Error("failed to reload config after save", "error", err)
+		return current, err
 	}
 
-	if a.config.HideWidgetOnFocus && a.config.ShowWidget && a.widgetWindow != nil {
-		a.widgetWindow.Show()
-		go setSkipTaskbar("NetSpeedWidget", true)
-	}
-}
+	a.mu.Lock()
+	a.config = *loaded
+	a.mu.Unlock()
 
-// GetWindowMode returns whether the current window should be a widget or settings.
-func (a *App) GetWindowMode() string {
-	return "settings"
-}
-
-// ShowSettings brings the settings window to the foreground.
-func (a *App) ShowSettings() {
-	if a.mainWindow == nil {
-		return
-	}
-	if a.mainWindow.IsVisible() {
-		a.mainWindow.Focus()
-		return
-	}
-	a.mainWindow.Show()
-	a.mainWindow.Focus()
-}
-
-// ShowWidget makes the floating widget visible and persists the setting.
-func (a *App) ShowWidget() {
-	if a.widgetWindow == nil {
-		return
-	}
-	a.widgetWindow.Show()
-	a.config.ShowWidget = true
-	if err := config.Save(*a.config); err != nil {
-		a.logger.Error("failed to save config", "error", err)
-	}
-	application.Get().Event.Emit("config:updated", *a.config)
-	go setSkipTaskbar("NetSpeedWidget", true)
-}
-
-// UpdateWindowPosition updates the current window's screen coordinates.
-func (a *App) UpdateWindowPosition(x, y int) {
-	// Not used in v3 multi-window approach
-}
-
-// UpdateWindowSize updates the widget window's dimensions.
-func (a *App) UpdateWindowSize(width, height int) {
-	if a.widgetWindow != nil {
-		a.widgetWindow.SetSize(width, height)
-	}
-}
-
-// SetWidgetPositionX11 provides an explicit path for X11 position updates.
-func (a *App) SetWidgetPositionX11(x, y int) {
-	if a.widgetWindow != nil {
-		a.widgetWindow.SetPosition(x, y)
-	}
-}
-
-// SaveWidgetPosition persists the widget's screen coordinates.
-func (a *App) SaveWidgetPosition(x, y int) {
-	a.config.WidgetX = x
-	a.config.WidgetY = y
-	_ = config.Save(*a.config)
-}
-
-func (a *App) startEventLoop() {
-	a.eventLoopStop = make(chan struct{})
-	a.eventLoopDone = make(chan struct{})
-
-	go func() {
-		defer close(a.eventLoopDone)
-
-		a.emitMonitorState()
-
-		ticker := time.NewTicker(time.Duration(a.config.PollIntervalMs) * time.Millisecond)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				a.emitMonitorState()
-			case <-a.eventLoopStop:
-				return
-			}
-		}
-	}()
-}
-
-func (a *App) stopEventLoop() {
-	if a.eventLoopStop == nil || a.eventLoopDone == nil {
-		return
+	if current.PollIntervalMs != loaded.PollIntervalMs {
+		a.monitor.Stop()
+		a.monitor = netmon.NewMonitor(loaded.PollIntervalMs)
+		a.monitor.Start()
 	}
 
-	close(a.eventLoopStop)
-	<-a.eventLoopDone
-	a.eventLoopStop = nil
-	a.eventLoopDone = nil
-}
-
-func (a *App) emitMonitorState() {
-	app := application.Get()
-	if app == nil {
-		return
-	}
-
-	if errMessage := a.monitor.GetLastError(); errMessage != "" {
-		app.Event.Emit(speedErrorEvent, map[string]string{"message": errMessage})
-		return
-	}
-
-	sample := a.monitor.GetSample()
-	if sample.InterfaceCount == 0 {
-		app.Event.Emit(speedErrorEvent, map[string]string{"message": "No active network adapters detected yet."})
-		return
-	}
-
-	app.Event.Emit(speedUpdateEvent, sample)
+	return *loaded, nil
 }

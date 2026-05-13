@@ -1,19 +1,5 @@
 import { create } from 'zustand';
-import { GetConfig, GetSpeeds, ListInterfaces, GetWindowMode, UpdateWindowPosition, SetWidgetPositionX11 } from '../../wailsjs/go/main/App';
-import { Environment } from '../../wailsjs/runtime/runtime';
-
-let isLinux = false;
-Environment().then((env) => {
-  isLinux = env.platform === 'linux';
-}).catch(() => {});
-
-async function updateWidgetPosition(x: number, y: number) {
-  if (isLinux) {
-    await SetWidgetPositionX11(x, y);
-  } else {
-    await UpdateWindowPosition(x, y);
-  }
-}
+import { GetConfig, GetState, SaveConfig, type BackendState } from '../lib/backend';
 
 export interface InterfaceSpeed {
   downloadBps: number;
@@ -41,17 +27,13 @@ export interface AppConfig {
 interface NetStoreState {
   speeds: Record<string, InterfaceSpeed>;
   interfaces: string[];
+  sampledAt: string | null;
   config: AppConfig;
-  windowMode: 'settings' | 'widget';
   isLoading: boolean;
   errorMessage: string | null;
   initialize: () => Promise<void>;
-  fetchSpeeds: () => Promise<void>;
-  fetchInterfaces: () => Promise<void>;
-  fetchConfig: () => Promise<void>;
+  refreshState: () => Promise<void>;
   updateConfig: (partial: Partial<AppConfig>) => Promise<void>;
-  switchToWidget: () => Promise<void>;
-  switchToSettings: () => Promise<void>;
   applyTheme: () => void;
 }
 
@@ -119,168 +101,106 @@ export const widgetPresets: WidgetPreset[] = [
   },
 ];
 
-type SaveConfigBridge = (config: AppConfig) => Promise<void>;
+let pollHandle: number | null = null;
+let initRetryHandle: number | null = null;
 
-let pollingStarted = false;
-
-function saveConfig(config: AppConfig) {
-  const bridge = (window as Window & {
-    go?: {
-      main?: {
-        App?: {
-          SaveConfig?: SaveConfigBridge;
-        };
-      };
-    };
-  }).go?.main?.App?.SaveConfig;
-
-  if (!bridge) {
-    return Promise.reject(new Error('SaveConfig bridge is not available yet.'));
-  }
-
-  return bridge(config);
-}
-
-function normalizeConfig(value: Partial<AppConfig> | undefined): AppConfig {
+function normalizeConfig(value: Partial<AppConfig> | null | undefined): AppConfig {
   return {
     ...defaultConfig,
     ...value,
   };
 }
 
+function startPolling(refreshState: () => Promise<void>, intervalMs: number) {
+  if (pollHandle !== null) {
+    window.clearInterval(pollHandle);
+  }
+
+  const safeInterval = Math.max(500, intervalMs || defaultConfig.pollIntervalMs);
+  pollHandle = window.setInterval(() => {
+    void refreshState();
+  }, safeInterval);
+}
+
+function scheduleInitializeRetry(initialize: () => Promise<void>) {
+  if (initRetryHandle !== null) {
+    return;
+  }
+
+  initRetryHandle = window.setTimeout(() => {
+    initRetryHandle = null;
+    void initialize();
+  }, 500);
+}
+
+function applyBackendState(
+  backendState: BackendState,
+  currentConfig: AppConfig,
+): Pick<NetStoreState, 'speeds' | 'interfaces' | 'sampledAt' | 'errorMessage'> & {
+  config?: AppConfig;
+} {
+  const interfaces = Array.isArray(backendState.interfaces) ? backendState.interfaces : [];
+  const speeds = backendState.speeds ?? {};
+  const nextState: Pick<NetStoreState, 'speeds' | 'interfaces' | 'sampledAt' | 'errorMessage'> & {
+    config?: AppConfig;
+  } = {
+    speeds,
+    interfaces,
+    sampledAt: backendState.sampledAt || null,
+    errorMessage: backendState.errorMessage || null,
+  };
+
+  if (currentConfig.selectedInterface && !interfaces.includes(currentConfig.selectedInterface)) {
+    nextState.config = {
+      ...currentConfig,
+      selectedInterface: '',
+    };
+  }
+
+  return nextState;
+}
+
 export const useNetStore = create<NetStoreState>((set, get) => ({
   speeds: {},
   interfaces: [],
+  sampledAt: null,
   config: defaultConfig,
-  windowMode: 'settings',
   isLoading: true,
   errorMessage: null,
 
   async initialize() {
-    console.log('[NetStore] Initialize called');
-    
-    // Start polling in background - don't wait for it
-    if (!pollingStarted) {
-      pollingStarted = true;
-      console.log('[NetStore] Starting polling interval');
-      window.setInterval(() => {
-        void get().fetchSpeeds();
-        void get().fetchInterfaces();
-        void get().fetchConfig();
-      }, 1000);
-    }
+    try {
+      const [configValue, backendState] = await Promise.all([
+        GetConfig(),
+        GetState(),
+      ]);
 
-    set({ isLoading: true, errorMessage: null });
-
-    // Detect mode from URL (Wails v3 multi-window)
-    const params = new URLSearchParams(window.location.search);
-    const modeParam = params.get('mode');
-    console.log('[NetStore] URL mode param:', modeParam);
-    
-    if (modeParam === 'settings' || modeParam === 'widget') {
-      set({ windowMode: modeParam });
-    }
-
-    // Debug: check if Wails bridge exists
-    const hasBridge = !!(window as any).go?.main?.App;
-    const hasRuntime = !!(window as any).runtime;
-    console.log('[NetStore] Wails bridge state:', { hasBridge, hasRuntime });
-
-    if (!hasBridge) {
-      console.warn('[NetStore] Wails bridge not available yet - using fallback');
+      const normalizedConfig = normalizeConfig(configValue as Partial<AppConfig>);
       set({
+        config: normalizedConfig,
         isLoading: false,
+        ...applyBackendState(backendState, normalizedConfig),
+      });
+
+      get().applyTheme();
+      startPolling(get().refreshState, normalizedConfig.pollIntervalMs);
+    } catch (error) {
+      set({
+        isLoading: true,
         errorMessage: null,
       });
-      get().applyTheme();
-      return;
+      scheduleInitializeRetry(get().initialize);
+      console.warn('[NetStore] backend not ready yet', error);
     }
-
-    // Try to get backend data with timeout
-    let completed = false;
-    
-    const initPromise = Promise.all([
-      GetConfig(),
-      ListInterfaces(),
-      GetSpeeds(),
-      GetWindowMode(),
-    ]).then((result) => {
-      console.log('[NetStore] Backend initialization successful:', result);
-      completed = true;
-      return result;
-    }).catch((error) => {
-      console.error('[NetStore] Backend initialization failed:', error);
-      completed = true;
-      return null;
-    });
-
-    const timeoutPromise = new Promise<null>((resolve) => {
-      window.setTimeout(() => {
-        console.warn('[NetStore] Initialization timeout after 3 seconds, completed=' + completed);
-        resolve(null);
-      }, 3000);
-    });
-
-    const result = await Promise.race([initPromise, timeoutPromise]);
-
-    if (!result) {
-      console.log('[NetStore] Using fallback configuration');
-      set({
-        isLoading: false,
-        errorMessage: null,
-      });
-      get().applyTheme();
-      return;
-    }
-
-    const [configValue, interfaces, speeds, mode] = result;
-    const normalizedConfig = normalizeConfig(configValue as Partial<AppConfig>);
-    console.log('[NetStore] Setting state with:', { 
-      configInterfaces: interfaces.length, 
-      windowMode: (modeParam as any) || (mode as 'settings' | 'widget')
-    });
-    
-    set({
-      config: normalizedConfig,
-      interfaces,
-      speeds: speeds as Record<string, InterfaceSpeed>,
-      // Only use GetWindowMode() if no URL param was found (fallback for v2)
-      windowMode: (modeParam as any) || (mode as 'settings' | 'widget'),
-      isLoading: false,
-      errorMessage: null,
-    });
-
-    // Listen for window mode from Go
-    const bridge = (window as any).runtime?.EventsOn;
-    if (bridge) {
-      console.log('[NetStore] Setting up runtime event listeners');
-      bridge('mode:set', (mode: 'settings' | 'widget') => {
-        console.log('[NetStore] Received mode:set event:', mode);
-        set({ windowMode: mode });
-      });
-
-      bridge('config:updated', (newConfig: AppConfig) => {
-        console.log('[NetStore] Received config:updated event');
-        set({ config: newConfig });
-        get().applyTheme();
-        
-        if (get().windowMode === 'widget') {
-          void updateWidgetPosition(newConfig.widgetX, newConfig.widgetY);
-        }
-      });
-    }
-
-    // Initial theme application
-    console.log('[NetStore] Applying initial theme');
-    get().applyTheme();
   },
 
-  async fetchSpeeds() {
+  async refreshState() {
     try {
-      const speeds = await GetSpeeds();
+      const backendState = await GetState();
+      const currentConfig = get().config;
       set({
-        speeds: speeds as Record<string, InterfaceSpeed>,
-        errorMessage: null,
+        isLoading: false,
+        ...applyBackendState(backendState, currentConfig),
       });
     } catch (error) {
       set({
@@ -289,43 +209,51 @@ export const useNetStore = create<NetStoreState>((set, get) => ({
     }
   },
 
-  async fetchInterfaces() {
-    try {
-      const interfaces = await ListInterfaces();
-      set({
-        interfaces,
-        errorMessage: null,
-      });
-    } catch (error) {
-      set({
-        errorMessage: error instanceof Error ? error.message : 'Unable to refresh interfaces.',
-      });
-    }
-  },
+  async updateConfig(partial) {
+    const previousConfig = get().config;
+    const nextConfig = normalizeConfig({
+      ...previousConfig,
+      ...partial,
+    });
 
-  async fetchConfig() {
+    set({
+      config: nextConfig,
+      errorMessage: null,
+    });
+    get().applyTheme();
+
+    if (previousConfig.pollIntervalMs !== nextConfig.pollIntervalMs) {
+      startPolling(get().refreshState, nextConfig.pollIntervalMs);
+    }
+
     try {
-      const configValue = await GetConfig();
-      const normalizedConfig = normalizeConfig(configValue as Partial<AppConfig>);
+      const savedConfig = await SaveConfig(nextConfig);
+      const normalizedConfig = normalizeConfig(savedConfig as Partial<AppConfig>);
       set({
         config: normalizedConfig,
       });
+      get().applyTheme();
 
-      // If we are the widget, we might need to update our own window position
-      if (get().windowMode === 'widget') {
-        void updateWidgetPosition(normalizedConfig.widgetX, normalizedConfig.widgetY);
+      if (nextConfig.pollIntervalMs !== normalizedConfig.pollIntervalMs) {
+        startPolling(get().refreshState, normalizedConfig.pollIntervalMs);
       }
     } catch (error) {
-      // Ignore silent errors for background polling
+      set({
+        config: previousConfig,
+        errorMessage: error instanceof Error ? error.message : 'Unable to save settings.',
+      });
+      get().applyTheme();
+
+      if (previousConfig.pollIntervalMs !== nextConfig.pollIntervalMs) {
+        startPolling(get().refreshState, previousConfig.pollIntervalMs);
+      }
     }
-    get().applyTheme();
   },
 
   applyTheme() {
     const { theme, appPreset } = get().config;
     const root = window.document.documentElement;
 
-    // Clear previous themes
     root.classList.remove('light', 'dark');
     appPresets.forEach((preset) => {
       root.classList.remove(`theme-${preset.id}`);
@@ -340,46 +268,6 @@ export const useNetStore = create<NetStoreState>((set, get) => ({
       root.classList.add(theme);
     }
 
-    // Add preset class
     root.classList.add(`theme-${appPreset}`);
-  },
-
-  async updateConfig(partial) {
-    const nextConfig = normalizeConfig({
-      ...get().config,
-      ...partial,
-    });
-
-    set({
-      config: nextConfig,
-      errorMessage: null,
-    });
-
-    try {
-      await saveConfig(nextConfig);
-      
-      // If widget is currently active, refresh its position if the position changed
-      if (get().windowMode === 'widget' && (partial.widgetX !== undefined || partial.widgetY !== undefined)) {
-        void get().switchToWidget();
-      }
-    } catch (error) {
-      set({
-        errorMessage: error instanceof Error ? error.message : 'Unable to save settings.',
-      });
-    }
-  },
-  async switchToWidget() {
-    const bridge = (window as any).go?.main?.App?.ShowWidget;
-    if (bridge) {
-      await bridge();
-      set({ windowMode: 'widget' });
-    }
-  },
-  async switchToSettings() {
-    const bridge = (window as any).go?.main?.App?.ShowSettings;
-    if (bridge) {
-      await bridge();
-      set({ windowMode: 'settings' });
-    }
   },
 }));

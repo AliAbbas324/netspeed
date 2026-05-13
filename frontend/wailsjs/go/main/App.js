@@ -10,8 +10,8 @@ export function GetSpeeds() {
   return window['go']['main']['App']['GetSpeeds']();
 }
 
-export function GetWindowMode() {
-  return window['go']['main']['App']['GetWindowMode']();
+export function GetState() {
+  return window['go']['main']['App']['GetState']();
 }
 
 export function ListInterfaces() {
@@ -20,28 +20,4 @@ export function ListInterfaces() {
 
 export function SaveConfig(arg1) {
   return window['go']['main']['App']['SaveConfig'](arg1);
-}
-
-export function SaveWidgetPosition(arg1, arg2) {
-  return window['go']['main']['App']['SaveWidgetPosition'](arg1, arg2);
-}
-
-export function SetMainWindowFocus(arg1) {
-  return window['go']['main']['App']['SetMainWindowFocus'](arg1);
-}
-
-export function SetWidgetPositionX11(arg1, arg2) {
-  return window['go']['main']['App']['SetWidgetPositionX11'](arg1, arg2);
-}
-
-export function ToggleWidget(arg1) {
-  return window['go']['main']['App']['ToggleWidget'](arg1);
-}
-
-export function UpdateWindowPosition(arg1, arg2) {
-  return window['go']['main']['App']['UpdateWindowPosition'](arg1, arg2);
-}
-
-export function UpdateWindowSize(arg1, arg2) {
-  return window['go']['main']['App']['UpdateWindowSize'](arg1, arg2);
 }

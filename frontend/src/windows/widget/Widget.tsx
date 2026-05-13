@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { formatTransferRate } from '../../features/speed-meter/formatters';
 import { useNetStore, widgetPresets } from '../../stores/useNetStore';
-import { UpdateWindowSize } from '../../../wailsjs/go/main/App';
+import { UpdateWindowSize } from '../../lib/backend';
 import { ScreenGetAll } from '../../../wailsjs/runtime/runtime';
 
 function getCombinedSpeed(speeds: Record<string, { downloadBps: number; uploadBps: number }>) {

@@ -21,7 +21,7 @@ export function SpeedCards() {
   const selectedInterface = useNetStore((state) => state.config.selectedInterface);
 
   const selectedSpeed = selectedInterface
-    ? speeds[selectedInterface] ?? { downloadBps: 0, uploadBps: 0 }
+    ? speeds[selectedInterface] ?? getCombinedSpeed(speeds)
     : getCombinedSpeed(speeds);
 
   const download = formatTransferRate(selectedSpeed.downloadBps);
