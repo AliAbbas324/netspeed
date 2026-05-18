@@ -1,5 +1,8 @@
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Slider } from '@/components/ui/slider';
+import { SettingsPanel } from '@/components/SettingsPanel';
 import {
   Select,
   SelectContent,
@@ -50,9 +53,7 @@ function SpeedValues({ config }: { config: AppConfig }) {
     <>
       {config.showDownload && (
         <div className="flex items-center gap-1.5 font-semibold tabular-nums tracking-tight">
-          <span className="text-blue-400" aria-hidden>
-            ↓
-          </span>
+          <ArrowDown className="h-3.5 w-3.5 text-blue-400" aria-hidden />
           <span style={{ opacity: config.widgetTextOpacity }}>
             {download.value}
             {download.unit}
@@ -61,9 +62,7 @@ function SpeedValues({ config }: { config: AppConfig }) {
       )}
       {config.showUpload && (
         <div className="flex items-center gap-1.5 font-semibold tabular-nums tracking-tight">
-          <span className="text-emerald-400" aria-hidden>
-            ↑
-          </span>
+          <ArrowUp className="h-3.5 w-3.5 text-emerald-400" aria-hidden />
           <span style={{ opacity: config.widgetTextOpacity }}>
             {upload.value}
             {upload.unit}
@@ -87,9 +86,7 @@ function SpeedValuesLight({ config }: { config: AppConfig }) {
     <>
       {config.showDownload && (
         <div className="flex items-center gap-1.5 font-semibold tabular-nums tracking-tight">
-          <span className="text-blue-600" aria-hidden>
-            ↓
-          </span>
+          <ArrowDown className="h-3.5 w-3.5 text-blue-600" aria-hidden />
           <span style={{ opacity: config.widgetTextOpacity }}>
             {download.value}
             {download.unit}
@@ -98,9 +95,7 @@ function SpeedValuesLight({ config }: { config: AppConfig }) {
       )}
       {config.showUpload && (
         <div className="flex items-center gap-1.5 font-semibold tabular-nums tracking-tight">
-          <span className="text-emerald-600" aria-hidden>
-            ↑
-          </span>
+          <ArrowUp className="h-3.5 w-3.5 text-emerald-600" aria-hidden />
           <span style={{ opacity: config.widgetTextOpacity }}>
             {upload.value}
             {upload.unit}
@@ -120,7 +115,11 @@ export function WidgetCustomization() {
   const lightBg = `rgba(${rgbFromHex(preset.light.bg)}, ${config.widgetBgOpacity})`;
 
   return (
-    <div className="space-y-0">
+    <SettingsPanel
+      title="Floating widget"
+      description="Customize the overlay that shows live speeds on your desktop."
+      contentClassName="space-y-0"
+    >
       <SettingsSection
         title="Preview"
         description="Approximate look of the floating widget on dark and light desktops."
@@ -235,10 +234,10 @@ export function WidgetCustomization() {
               <Label htmlFor="widget-x" className="text-sm font-medium text-foreground">
                 Horizontal (X)
               </Label>
-              <input
+              <Input
                 id="widget-x"
                 type="number"
-                className="h-9 w-[4.5rem] rounded-md border border-border bg-background px-2 text-right text-sm tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-9 w-[4.5rem] px-2 text-right tabular-nums"
                 value={config.widgetX}
                 onChange={(e) => void updateConfig({ widgetX: parseInt(e.target.value, 10) || 0 })}
               />
@@ -261,10 +260,10 @@ export function WidgetCustomization() {
               <Label htmlFor="widget-y" className="text-sm font-medium text-foreground">
                 Vertical (Y)
               </Label>
-              <input
+              <Input
                 id="widget-y"
                 type="number"
-                className="h-9 w-[4.5rem] rounded-md border border-border bg-background px-2 text-right text-sm tabular-nums focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="h-9 w-[4.5rem] px-2 text-right tabular-nums"
                 value={config.widgetY}
                 onChange={(e) => void updateConfig({ widgetY: parseInt(e.target.value, 10) || 0 })}
               />
@@ -353,6 +352,6 @@ export function WidgetCustomization() {
           </div>
         </div>
       </SettingsSection>
-    </div>
+    </SettingsPanel>
   );
 }

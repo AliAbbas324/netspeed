@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, type CSSProperties, type SVGProps } from 'react';
 import { X, Minus, Sun, Moon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import {
   WindowMinimise,
   WindowToggleMaximise,
@@ -139,7 +141,7 @@ export function TitleBar() {
   };
 
   return (
-    <div className="grid h-12 w-full shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-border/50 bg-card/95 backdrop-blur-xl select-none">
+    <div className="grid h-11 w-full shrink-0 grid-cols-[1fr_auto_1fr] items-center border-b border-border/60 bg-card/90 shadow-sm backdrop-blur-md select-none">
       <div
         className="flex min-w-0 items-center gap-3 pl-4"
         style={{ '--wails-draggable': 'drag' } as CSSProperties}
@@ -170,27 +172,33 @@ export function TitleBar() {
         className="flex items-center justify-end gap-0.5 pr-2"
         style={{ '--wails-draggable': 'no-drag' } as CSSProperties}
       >
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={toggleTheme}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="h-8 w-8 text-muted-foreground"
           title={`Switch to ${config.theme === 'dark' ? 'light' : 'dark'} mode`}
         >
           {config.theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-        </button>
-        <div className="mx-1.5 h-5 w-px shrink-0 bg-border/60" aria-hidden />
-        <button
+        </Button>
+        <Separator orientation="vertical" className="mx-1 h-5" />
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => WindowMinimise()}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="h-8 w-8 text-muted-foreground"
           title="Minimize"
         >
           <Minus className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={handleToggleMaximize}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+          className="h-8 w-8 text-muted-foreground"
           title={isMaximized ? 'Restore' : 'Maximize'}
           aria-pressed={isMaximized}
         >
@@ -199,15 +207,17 @@ export function TitleBar() {
           ) : (
             <MaximizeToFullWindowIcon className="h-4 w-4 shrink-0" />
           )}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
+          variant="ghost"
+          size="icon"
           onClick={() => Quit()}
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/15 hover:text-destructive"
+          className="h-8 w-8 text-muted-foreground hover:bg-destructive/15 hover:text-destructive"
           title="Close"
         >
           <X className="h-4 w-4" strokeWidth={2.25} aria-hidden />
-        </button>
+        </Button>
       </div>
     </div>
   );

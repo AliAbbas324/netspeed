@@ -1,11 +1,20 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-html, body, #root {
+html,
+body,
+#root {
   width: 100%;
   height: 100%;
   margin: 0;
   padding: 0;
+}
+
+* {
+  -webkit-user-select: none !important; /* Safari, Chrome, and newer Edge */
+  -moz-user-select: none !important; /* Older Firefox */
+  -ms-user-select: none !important; /* Older IE and Edge */
+  user-select: none !important; /* Standard property */
 }
 
 @custom-variant dark (&:is(.dark *));
@@ -13,7 +22,8 @@ html, body, #root {
 /* ============================
    DEFAULT THEME (Space/Sleek)
    ============================ */
-:root, .theme-default {
+:root,
+.theme-default {
   /* Sleek Light Mode */
   --background: 220 33% 98%;
   --foreground: 222 47% 11%;
@@ -37,7 +47,8 @@ html, body, #root {
   --radius: 0.75rem;
 }
 
-.dark, .dark.theme-default {
+.dark,
+.dark.theme-default {
   /* Deep Space Dark Mode Background */
   --background: 228 35% 5%;
   --foreground: 210 40% 98%;
@@ -229,14 +240,27 @@ html, body, #root {
 }
 
 @keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-8px); }
-  100% { transform: translateY(0px); }
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
 }
 
 @keyframes pulse-glow {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50% { opacity: 0.8; transform: scale(1.05); }
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.05);
+  }
 }
 
 @layer base {
@@ -248,12 +272,53 @@ html, body, #root {
     @apply text-foreground;
     background-color: transparent !important;
     margin: 0;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-      "Roboto", "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
-      "Helvetica Neue", sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      "Roboto",
+      "Oxygen",
+      "Ubuntu",
+      "Cantarell",
+      "Fira Sans",
+      "Droid Sans",
+      "Helvetica Neue",
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Ensure body transitions colors smoothly when theme changes */
-    transition: background-color 0.5s ease, color 0.5s ease;
+    transition:
+      background-color 0.5s ease,
+      color 0.5s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .app-ambient {
+    background-image:
+      radial-gradient(
+        ellipse 80% 50% at 50% -20%,
+        hsl(var(--primary) / 0.12),
+        transparent
+      ),
+      radial-gradient(
+        ellipse 60% 40% at 100% 0%,
+        hsl(var(--primary) / 0.06),
+        transparent
+      );
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
   }
 }

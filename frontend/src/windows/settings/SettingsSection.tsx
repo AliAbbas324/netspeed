@@ -10,18 +10,11 @@ type SettingsSectionProps = {
 
 export function SettingsSection({ title, description, children, className }: SettingsSectionProps) {
   return (
-    <section
-      className={cn(
-        'border-t border-border/70 pt-8 first:border-t-0 first:pt-0',
-        className,
-      )}
-    >
-      <header className="mb-5">
-        <h2 className="text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          {title}
-        </h2>
+    <section className={cn('space-y-5 border-t border-border/60 pt-6 first:border-t-0 first:pt-0', className)}>
+      <header>
+        <h3 className="text-sm font-semibold text-foreground">{title}</h3>
         {description ? (
-          <p className="mt-2 max-w-prose text-sm leading-relaxed text-muted-foreground/90">{description}</p>
+          <p className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{description}</p>
         ) : null}
       </header>
       <div className="space-y-5">{children}</div>

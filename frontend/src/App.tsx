@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { TitleBar } from './components/TitleBar';
+import { LoadingScreen } from './components/LoadingScreen';
 import { useNetStore } from './stores/useNetStore';
 import { Settings } from './windows/settings/Settings';
 
@@ -12,7 +13,7 @@ function App() {
   }, [initialize]);
 
   if (isLoading) {
-    return <div className="flex h-screen w-screen items-center justify-center bg-background text-foreground">Loading NetSpeed...</div>;
+    return <LoadingScreen />;
   }
 
   return (

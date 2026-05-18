@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { ArrowDown, ArrowUp } from 'lucide-react';
 import { formatTransferRate } from '../../features/speed-meter/formatters';
 import { useNetStore, widgetPresets } from '../../stores/useNetStore';
 import { UpdateWindowSize } from '../../lib/backend';
@@ -33,7 +34,7 @@ function SpeedValues({ config }: { config: AppConfig }) {
           className="flex items-center gap-1.5 font-bold tabular-nums tracking-tight"
           style={{ opacity: config.widgetTextOpacity }}
         >
-          <span className="text-blue-400 font-black" aria-hidden="true">↓</span>
+          <ArrowDown className="h-3.5 w-3.5 shrink-0 text-blue-400" aria-hidden />
           <span>{download.value}{download.unit}</span>
         </div>
       )}
@@ -42,7 +43,7 @@ function SpeedValues({ config }: { config: AppConfig }) {
           className="flex items-center gap-1.5 font-bold tabular-nums tracking-tight"
           style={{ opacity: config.widgetTextOpacity }}
         >
-          <span className="text-emerald-400 font-black" aria-hidden="true">↑</span>
+          <ArrowUp className="h-3.5 w-3.5 shrink-0 text-emerald-400" aria-hidden />
           <span>{upload.value}{upload.unit}</span>
         </div>
       )}
